@@ -438,12 +438,6 @@ const userData = ref({
   phone: '+1 (555) 123-4567',
 })
 
-const stats = ref({
-  totalReports: 5,
-  verifiedReports: 3,
-  pendingReports: 2,
-})
-
 const reports = ref([
   { id: 103, date: '2025-12-01', status: 'Verified', familyMembers: 3 },
   { id: 102, date: '2025-11-28', status: 'Pending', familyMembers: 4 },
@@ -467,11 +461,11 @@ const totalReports = computed(() => {
 })
 // get verified reports
 const totalVerifedReports = computed(() => {
-  return reportStore?.reports?.filter((report) => report.report_status === 'varified').length
+  return reportStore?.reports?.filter((report) => report?.report_status === 'varified').length
 })
 // get pending reports
 const totalPendingReports = computed(() => {
-  return reportStore?.reports?.filter((report) => report.report_status === 'pending').length
+  return reportStore?.reports?.filter((report) => report?.report_status === 'pending').length
 })
 // Methods
 const formatDate = (dateString) => {
@@ -490,7 +484,7 @@ const refreshReports = () => {
   setTimeout(async () => {
     isLoading.value = false
     // In a real app, you would update the data here
-    await reportStore?.fetchReports()
+    await reportStore.fetchReports()
   }, 1000)
 }
 
@@ -499,24 +493,24 @@ const downloadReport = () => {
   console.log('Downloading reports...')
   // In a real app, this would trigger a file download
   setTimeout(() => {
-    alert('Report download initiated. You will receive the PDF via email shortly.')
+    alert('Demo Report download initiated. You will receive the PDF via email shortly.')
   }, 500)
 }
 
 const showHelp = () => {
-  router.push('/help')
+  router.push('/dashboard')
 }
 
 const createNewReport = () => {
-  router.push('/victim/reports/new')
+  router.push('/report')
 }
 
 const viewReport = (id) => {
-  router.push(`/victim/reports/${id}`)
+  router.push(`/dashboard`)
 }
 
 const viewAllReports = () => {
-  router.push('/victim/reports')
+  router.push('/dashboard')
 }
 
 // Lifecycle
