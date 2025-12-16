@@ -2,7 +2,7 @@ import api from '@/api/axios'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 export const useReportStore = defineStore("report", () => {
-    const reports = ref(null)
+    const reports = ref([])
     const addReport = async (payload) => {
         try {
             const response = await api.post('/api/user/post/report', payload)
