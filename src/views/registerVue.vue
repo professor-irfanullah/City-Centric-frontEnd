@@ -588,12 +588,12 @@ const responseMessage = ref('')
 // District and Tehsil data (with Swat as the main district)
 const districts = ref([
   { id: 'swat', name: 'Swat' },
-  { id: 'lower_dir', name: 'Lower Dir' },
-  { id: 'upper_dir', name: 'Upper Dir' },
-  { id: 'chitral', name: 'Chitral' },
-  { id: 'malakand', name: 'Malakand' },
-  { id: 'buner', name: 'Buner' },
-  { id: 'shangla', name: 'Shangla' },
+  // { id: 'lower_dir', name: 'Lower Dir' },
+  // { id: 'upper_dir', name: 'Upper Dir' },
+  // { id: 'chitral', name: 'Chitral' },
+  // { id: 'malakand', name: 'Malakand' },
+  // { id: 'buner', name: 'Buner' },
+  // { id: 'shangla', name: 'Shangla' },
 ])
 
 const tehsils = ref([
@@ -601,12 +601,10 @@ const tehsils = ref([
   { id: 'matta', districtId: 'swat', name: 'Matta' },
   { id: 'khwazakhela', districtId: 'swat', name: 'Khwazakhela' },
   { id: 'bahrain', districtId: 'swat', name: 'Bahrain' },
-  { id: 'kalam', districtId: 'swat', name: 'Kalam' },
   { id: 'kabal', districtId: 'swat', name: 'Kabal' },
   { id: 'barikot', districtId: 'swat', name: 'Barikot' },
   { id: 'babuzai', districtId: 'swat', name: 'Babuzai' },
   { id: 'charbagh', districtId: 'swat', name: 'Charbagh' },
-  { id: 'mingora', districtId: 'swat', name: 'Mingora' },
 
   // Lower Dir Tehsils
   { id: 'timergara', districtId: 'lower_dir', name: 'Timergara' },

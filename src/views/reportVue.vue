@@ -108,7 +108,7 @@
                   type="button"
                   @click="getCurrentLocation"
                   :disabled="locationLoading"
-                  class="absolute right-3 top-3 text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="absolute right-3 top-3 text-[10px] sm:text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 disabled:cursor-not-allowed truncate"
                 >
                   {{ locationLoading ? 'Getting Location...' : 'Get Current Location' }}
                 </button>
@@ -1042,7 +1042,80 @@
       </form>
     </div>
 
-    <!-- Success Modal -->
+    <modal-vue :is-open="showSuccessModal" @close="resetForm">
+      <template #icon>
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+          <svg
+            class="w-10 h-10 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+      </template>
+      <template #title> Report Submitted Successfully! </template>
+      <template #content>
+        <p>
+          Your disaster report has been received. Our team will review it and contact you if
+          additional information is needed.
+        </p>
+      </template>
+      <template #actions>
+        <button
+          @click="resetForm"
+          class="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Submit Another Report
+        </button>
+      </template>
+    </modal-vue>
+    <!-- Error Modal -->
+    <modal-vue :is-open="showErrorModal" @close="showErrorModal = false">
+      <template #icon>
+        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+          <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+      </template>
+
+      <template #title> Submission Failed </template>
+
+      <template #content>
+        <p>
+          {{ errorMessage || 'There was an error submitting your report. Please try again.' }}
+        </p>
+      </template>
+
+      <template #actions>
+        <button
+          @click="showErrorModal = false"
+          class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Close
+        </button>
+        <button
+          @click="showErrorModal = false"
+          class="flex-1 px-6 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </template>
+    </modal-vue>
+
+    <!-- Success Modal 
     <div
       v-if="showSuccessModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
@@ -1070,10 +1143,6 @@
           Your disaster report has been received. Our team will review it and contact you if
           additional information is needed.
         </p>
-        <div class="bg-blue-50 rounded-xl p-4 mb-6">
-          <p class="text-sm text-gray-700"><strong>Reference ID:</strong> {{ referenceId }}</p>
-          <p class="text-sm text-gray-600 mt-1">Save this for future reference.</p>
-        </div>
         <button
           @click="resetForm"
           class="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -1081,7 +1150,7 @@
           Submit Another Report
         </button>
       </div>
-    </div>
+     </div> -->
   </div>
 </template>
 
@@ -1089,7 +1158,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useReportStore } from '../store/reportsStore'
 import { useRouter } from 'vue-router'
-
+import modalVue from '@/components/modalVue.vue'
 const store = useReportStore()
 const router = useRouter()
 
@@ -1165,8 +1234,9 @@ const shopImagesInput = ref(null)
 
 // Submission State
 const isSubmitting = ref(false)
-const showSuccessModal = ref(false)
-const referenceId = ref('')
+const showSuccessModal = ref(true)
+const showErrorModal = ref(false)
+const errorMessage = ref('')
 
 // Computed Properties
 const familyFields = computed(() => [
@@ -1721,10 +1791,13 @@ const submitForm = async () => {
 
     // Show success modal
     // referenceId.value = 'DIS-' + Date.now().toString().slice(-8)
-    // showSuccessModal.value = true
+    showSuccessModal.value = true
+    showErrorModal.value = false
   } catch (error) {
     console.error('Error submitting form:', error)
-    alert('Error submitting form. Please try again.')
+    showSuccessModal.value = false
+    // alert('Error submitting form. Please try again.')
+    errorMessage.value = error.message
   } finally {
     isSubmitting.value = false
   }
