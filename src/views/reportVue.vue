@@ -1234,7 +1234,7 @@ const shopImagesInput = ref(null)
 
 // Submission State
 const isSubmitting = ref(false)
-const showSuccessModal = ref(true)
+const showSuccessModal = ref(false)
 const showErrorModal = ref(false)
 const errorMessage = ref('')
 
