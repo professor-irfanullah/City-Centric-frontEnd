@@ -1796,8 +1796,9 @@ const submitForm = async () => {
   } catch (error) {
     console.error('Error submitting form:', error)
     showSuccessModal.value = false
+    showErrorModal.value = true
     // alert('Error submitting form. Please try again.')
-    errorMessage.value = error.message
+    errorMessage.value = error.response.data.message || error.message
   } finally {
     isSubmitting.value = false
   }
