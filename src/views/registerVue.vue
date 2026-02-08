@@ -75,7 +75,7 @@
           </div>
         </div>
         <h1 class="text-2xl font-bold text-center">Create Account</h1>
-        <p class="text-center text-blue-100 mt-1 text-sm">Flood Relief Victim Registration</p>
+        <p class="text-center text-blue-100 mt-1 text-sm">Flood Relief Affected Registration</p>
       </div>
 
       <!-- Form Section -->
@@ -877,23 +877,10 @@ const register = async () => {
       form.cnic,
       form.phone,
       form.muhalla,
-      form.muhalla,
       tehsilName,
       districtName,
       form.password
     )
-    // const response = await api.post('/api/auth/register', {
-    //   name: form.name,
-    //   father_name: form.father,
-    //   email: form.email || null, // Send null if email is empty
-    //   cnic: form.cnic,
-    //   contact: form.phone,
-    //   muhalla: form.muhalla,
-    //   village: form.muhalla, // Using muhalla as village
-    //   tehsil: tehsilName,
-    //   district: districtName,
-    //   password: form.password,
-    // })
 
     console.log('Registration successful:', response.data)
     responseMessage.value = response.data.msg
