@@ -475,7 +475,7 @@
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                     />
                   </svg>
-                  Animals Impact
+                  Cattle Impact
                 </h3>
                 <label class="flex items-center cursor-pointer">
                   <div class="relative">
@@ -489,7 +489,7 @@
                       :class="areAnimalsImpacted ? 'translate-x-4' : ''"
                     ></div>
                   </div>
-                  <span class="ml-3 font-medium">Animals Affected</span>
+                  <span class="ml-3 font-medium">Cattle Affected</span>
                 </label>
               </div>
 
@@ -511,7 +511,7 @@
                           d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Small Animals
+                      Small Cattle
                     </h4>
                     <p class="text-sm text-gray-500 mb-4">
                       Chickens, goats, sheep, rabbits, birds, etc.
@@ -642,7 +642,7 @@
                           d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      Big Animals
+                      Big Cattle
                     </h4>
                     <p class="text-sm text-gray-500 mb-4">
                       Cows, buffaloes, horses, camels, donkeys, etc.
@@ -765,14 +765,14 @@
                 >
                   <div class="flex items-center justify-between">
                     <div>
-                      <p class="font-medium text-gray-800">Total Animal Impact</p>
+                      <p class="font-medium text-gray-800">Total Cattle Impact</p>
                       <p class="text-sm text-gray-600">
                         Deaths: {{ totalAnimalDeaths }}, Injured: {{ totalAnimalInjured }}
                       </p>
                     </div>
                     <div class="text-right">
                       <p class="text-2xl font-bold text-green-600">{{ totalAnimalImpact }}</p>
-                      <p class="text-sm text-gray-500">animals affected</p>
+                      <p class="text-sm text-gray-500">Cattle affected</p>
                     </div>
                   </div>
                 </div>
@@ -1194,21 +1194,21 @@ const shopDamageLevel = ref(null)
 const damageLevels = [
   {
     value: 'minor',
-    label: 'Only Water & Silk',
+    label: 'Only Water & Silt',
     emoji: '🟡',
     description: 'Repairable damage',
     selectedClass: 'border-yellow-500 bg-yellow-50',
   },
   {
     value: 'major',
-    label: 'Minor Damage',
+    label: 'Partial Damage',
     emoji: '🟠',
     description: '1 room or boundary wall or both',
     selectedClass: 'border-orange-500 bg-orange-50',
   },
   {
     value: 'fully_destroyed',
-    label: 'Major Damage',
+    label: 'Complete Damage',
     emoji: '🔴',
     description: '2 rooms or above',
     selectedClass: 'border-red-500 bg-red-50',
