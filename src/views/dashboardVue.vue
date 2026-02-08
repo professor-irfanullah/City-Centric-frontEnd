@@ -4,7 +4,7 @@
     <!-- Header -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-      <p class="mt-2 text-gray-600">Monitor your flood relief reports and status</p>
+      <p class="mt-2 text-gray-600">Monitor your disaster relief reports and status</p>
     </div>
 
     <!-- Welcome Card -->
@@ -35,8 +35,8 @@
         </div>
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
           <p class="text-sm font-medium text-blue-100">Victim ID</p>
-          <p class="text-lg font-semibold mt-1">{{ userData.id }}</p>
-          <p class="text-sm text-blue-200 mt-2">{{ userData.phone }}</p>
+          <p class="text-lg font-semibold mt-1">{{ reportStore?.reports?.user_id }}</p>
+          <p class="text-sm text-blue-200 mt-2">{{ reportStore?.reports?.phone_number }}</p>
         </div>
       </div>
     </div>
@@ -65,7 +65,9 @@
             </div>
             <div>
               <p class="text-sm font-medium text-gray-600">Total Reports</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ totalReports }}</p>
+              <p class="text-3xl font-bold text-gray-900 mt-1">
+                {{ reportStore?.reports?.total_reports }}
+              </p>
             </div>
           </div>
           <div class="mt-4 pt-4 border-t border-gray-100">
@@ -90,7 +92,9 @@
             </div>
             <div>
               <p class="text-sm font-medium text-gray-600">Verified</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ totalVerifedReports }}</p>
+              <p class="text-3xl font-bold text-gray-900 mt-1">
+                {{ reportStore?.reports?.total_verified_reports }}
+              </p>
             </div>
           </div>
           <div class="mt-4 pt-4 border-t border-gray-100">
@@ -115,7 +119,9 @@
             </div>
             <div>
               <p class="text-sm font-medium text-gray-600">Pending Review</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">{{ totalPendingReports }}</p>
+              <p class="text-3xl font-bold text-gray-900 mt-1">
+                {{ reportStore?.reports?.total_pending_reports }}
+              </p>
             </div>
           </div>
           <div class="mt-4 pt-4 border-t border-gray-100">
@@ -129,9 +135,10 @@
     <div class="mb-8">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <router-link
-          to="/report"
-          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
+        <button
+          @click="navigateToReports"
+          :disabled="disableBtn"
+          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left disabled:cursor-not-allowed disabled:opacity-50"
         >
           <div class="flex flex-col items-center text-center">
             <div
@@ -147,9 +154,9 @@
               </svg>
             </div>
             <h4 class="font-semibold text-gray-900">New Damage Report</h4>
-            <p class="text-sm text-gray-500 mt-1">Submit new flood damage assessment</p>
+            <p class="text-sm text-gray-500 mt-1">Submit new disaster damage assessment</p>
           </div>
-        </router-link>
+        </button>
 
         <button
           @click="refreshReports"
@@ -173,7 +180,7 @@
           </div>
         </button>
 
-        <button
+        <!-- <button
           @click="downloadReport"
           class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
         >
@@ -193,9 +200,9 @@
             <h4 class="font-semibold text-gray-900">Export Reports</h4>
             <p class="text-sm text-gray-500 mt-1">Download all reports as PDF</p>
           </div>
-        </button>
+        </button> -->
 
-        <button
+        <!-- <button
           @click="showHelp"
           class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
         >
@@ -215,7 +222,7 @@
             <h4 class="font-semibold text-gray-900">Help & Support</h4>
             <p class="text-sm text-gray-500 mt-1">Get assistance or FAQ</p>
           </div>
-        </button>
+        </button> -->
       </div>
     </div>
 
@@ -226,11 +233,12 @@
       >
         <div>
           <h3 class="text-lg font-semibold text-gray-900">Recent Reports</h3>
-          <p class="text-sm text-gray-500 mt-1">Your latest flood damage assessments</p>
+          <p class="text-sm text-gray-500 mt-1">Your latest disaster damage assessments</p>
         </div>
-        <router-link
-          to="/report"
-          class="mt-3 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+        <button
+          @click="navigateToReports"
+          :disabled="disableBtn"
+          class="mt-3 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -241,7 +249,7 @@
             />
           </svg>
           New Report
-        </router-link>
+        </button>
       </div>
 
       <!-- Loading State -->
@@ -254,7 +262,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="reports.length === 0" class="p-8 text-center">
+      <div v-else-if="reportStore?.reports?.total_reports.length === 0" class="p-8 text-center">
         <div
           class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"
         >
@@ -268,7 +276,7 @@
           </svg>
         </div>
         <h4 class="text-lg font-semibold text-gray-900">No reports yet</h4>
-        <p class="text-gray-600 mt-2">You haven't submitted any flood damage reports</p>
+        <p class="text-gray-600 mt-2">You haven't submitted any disaster damage reports</p>
         <button
           @click="createNewReport"
           class="mt-6 inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -288,7 +296,7 @@
       <!-- Reports List -->
       <div v-else class="divide-y divide-gray-200">
         <div
-          v-for="report in reportStore?.reports"
+          v-for="report in reportStore?.reports?.all_reports"
           :key="report.report_id"
           @click="viewReport(report.report_id)"
           class="px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors group"
@@ -388,9 +396,11 @@
       </div>
 
       <!-- View All Reports Link -->
-      <div v-if="reportStore?.reports?.length > 0" class="px-6 py-4 border-t border-gray-200">
+      <div
+        v-if="reportStore?.reports?.all_reports?.length > 1"
+        class="px-6 py-4 border-t border-gray-200"
+      >
         <button
-          disabled="true"
           @click="viewAllReports"
           class="disabled:text-blue-500 disabled:cursor-not-allowed text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
         >
@@ -411,7 +421,7 @@
     <div class="mt-8 text-center">
       <p class="text-sm text-gray-500">
         Need immediate assistance? Call our support line:
-        <a href="tel:+18001234567" class="text-blue-600 hover:text-blue-700 font-medium"
+        <a href="tel:1234-567-89-1234" class="text-blue-600 hover:text-blue-700 font-medium"
           >1234-567-89-1234</a
         >
       </p>
@@ -430,21 +440,7 @@ const router = useRouter()
 
 // State
 const isLoading = ref(true)
-
-// Data
-const userData = ref({
-  id: 'V-2023-001245',
-  fullName: 'Jane Doe',
-  phone: '+1 (555) 123-4567',
-})
-
-const reports = ref([
-  { id: 103, date: '2025-12-01', status: 'Verified', familyMembers: 3 },
-  { id: 102, date: '2025-11-28', status: 'Pending', familyMembers: 4 },
-  { id: 101, date: '2025-11-25', status: 'Verified', familyMembers: 2 },
-  { id: 100, date: '2025-11-20', status: 'Verified', familyMembers: 5 },
-  { id: 99, date: '2025-11-18', status: 'Pending', familyMembers: 3 },
-])
+const disableBtn = ref(false)
 
 // Computed
 const currentDate = computed(() => {
@@ -455,18 +451,7 @@ const currentDate = computed(() => {
     day: 'numeric',
   })
 })
-// get total reports
-const totalReports = computed(() => {
-  return reportStore?.reports?.length
-})
-// get verified reports
-const totalVerifedReports = computed(() => {
-  return reportStore?.reports?.filter((report) => report?.report_status === 'varified').length
-})
-// get pending reports
-const totalPendingReports = computed(() => {
-  return reportStore?.reports?.filter((report) => report?.report_status === 'pending').length
-})
+
 // Methods
 const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -479,26 +464,10 @@ const formatDate = (dateString) => {
 const refreshReports = () => {
   isLoading.value = true
   console.log('Refreshing reports...')
-
-  // Simulate API call
   setTimeout(async () => {
     isLoading.value = false
-    // In a real app, you would update the data here
-    await reportStore.fetchReports()
+    await fetchReports()
   }, 1000)
-}
-
-const downloadReport = () => {
-  // Simulate download
-  console.log('Downloading reports...')
-  // In a real app, this would trigger a file download
-  setTimeout(() => {
-    alert('Demo Report download initiated. You will receive the PDF via email shortly.')
-  }, 500)
-}
-
-const showHelp = () => {
-  router.push('/dashboard')
 }
 
 const createNewReport = () => {
@@ -512,17 +481,32 @@ const viewReport = (id) => {
 const viewAllReports = () => {
   router.push('/dashboard')
 }
+const navigateToReports = () => {
+  if (parseInt(reportStore?.reports?.total_reports) >= 0) {
+    disableBtn.value = true
+    return
+  }
 
+  router.push('/report')
+}
+const fetchReports = async () => {
+  try {
+    await reportStore.fetchReports()
+  } catch (err) {
+    console.log(err)
+    if (err.response.data.statusCode === 401) {
+      console.log('unAuthorized')
+      router.push('/login')
+    }
+  }
+}
 // Lifecycle
 onMounted(async () => {
   await store.userAuthStatus()
-  await reportStore.fetchReports()
+  await fetchReports()
   console.log(reportStore?.reports)
 
-  // Simulate API call delay
-  setTimeout(() => {
-    isLoading.value = false
-  }, 800)
+  isLoading.value = false
 })
 </script>
 
