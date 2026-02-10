@@ -26,7 +26,7 @@
             </div>
             <div>
               <h2 class="text-2xl font-bold">
-                Welcome back, <span class="capitalize">{{ store?.userData?.name }}</span
+                Welcome back, <span class="capitalize">{{ store.userData?.name || 'User' }}</span
                 >!
               </h2>
               <p class="mt-1 text-blue-100">Here's your current relief status</p>
@@ -35,8 +35,10 @@
         </div>
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
           <p class="text-sm font-medium text-blue-100">Victim ID</p>
-          <p class="text-lg font-semibold mt-1">{{ reportStore?.reports?.user_id }}</p>
-          <p class="text-sm text-blue-200 mt-2">{{ reportStore?.reports?.phone_number }}</p>
+          <p class="text-lg font-semibold mt-1">{{ reportStore.reports?.user_id || 'N/A' }}</p>
+          <p class="text-sm text-blue-200 mt-2">
+            {{ maskedPhoneNumber }}
+          </p>
         </div>
       </div>
     </div>
@@ -48,86 +50,29 @@
         <span class="text-sm text-gray-500">Last updated: {{ currentDate }}</span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Total Reports -->
-        <div
-          class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div class="flex items-center">
-            <div class="p-3 rounded-lg bg-blue-50 text-blue-600 mr-4">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Total Reports</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">
-                {{ reportStore?.reports?.total_reports }}
-              </p>
-            </div>
-          </div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-xs text-gray-500">All submitted reports</p>
-          </div>
-        </div>
+        <StatsCard
+          title="Total Reports"
+          :value="reportStore.reports?.total_reports || 0"
+          description="All submitted reports"
+          icon="document"
+          color="blue"
+        />
 
-        <!-- Verified Reports -->
-        <div
-          class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div class="flex items-center">
-            <div class="p-3 rounded-lg bg-green-50 text-green-600 mr-4">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Verified</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">
-                {{ reportStore?.reports?.total_verified_reports }}
-              </p>
-            </div>
-          </div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-xs text-gray-500">Approved for assistance</p>
-          </div>
-        </div>
+        <StatsCard
+          title="Verified"
+          :value="reportStore.reports?.total_verified_reports || 0"
+          description="Approved for assistance"
+          icon="check"
+          color="green"
+        />
 
-        <!-- Pending Reports -->
-        <div
-          class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-        >
-          <div class="flex items-center">
-            <div class="p-3 rounded-lg bg-yellow-50 text-yellow-600 mr-4">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div>
-              <p class="text-sm font-medium text-gray-600">Pending Review</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">
-                {{ reportStore?.reports?.total_pending_reports }}
-              </p>
-            </div>
-          </div>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-xs text-gray-500">Awaiting verification</p>
-          </div>
-        </div>
+        <StatsCard
+          title="Pending Review"
+          :value="reportStore.reports?.total_pending_reports || 0"
+          description="Awaiting verification"
+          icon="clock"
+          color="yellow"
+        />
       </div>
     </div>
 
@@ -135,94 +80,22 @@
     <div class="mb-8">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <button
-          @click="navigateToReports"
-          :disabled="disableBtn"
-          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <div class="flex flex-col items-center text-center">
-            <div
-              class="p-3 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors mb-3"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </div>
-            <h4 class="font-semibold text-gray-900">New Damage Report</h4>
-            <p class="text-sm text-gray-500 mt-1">Submit new disaster damage assessment</p>
-          </div>
-        </button>
+        <QuickActionButton
+          title="New Damage Report"
+          description="Submit new disaster damage assessment"
+          icon="plus"
+          color="blue"
+          :disabled="isNewReportDisabled"
+          @click="handleNewReport"
+        />
 
-        <button
+        <QuickActionButton
+          title="Refresh Status"
+          description="Update all report statuses"
+          icon="refresh"
+          color="green"
           @click="refreshReports"
-          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
-        >
-          <div class="flex flex-col items-center text-center">
-            <div
-              class="p-3 rounded-full bg-green-50 text-green-600 group-hover:bg-green-100 transition-colors mb-3"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-            </div>
-            <h4 class="font-semibold text-gray-900">Refresh Status</h4>
-            <p class="text-sm text-gray-500 mt-1">Update all report statuses</p>
-          </div>
-        </button>
-
-        <!-- <button
-          @click="downloadReport"
-          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
-        >
-          <div class="flex flex-col items-center text-center">
-            <div
-              class="p-3 rounded-full bg-purple-50 text-purple-600 group-hover:bg-purple-100 transition-colors mb-3"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                />
-              </svg>
-            </div>
-            <h4 class="font-semibold text-gray-900">Export Reports</h4>
-            <p class="text-sm text-gray-500 mt-1">Download all reports as PDF</p>
-          </div>
-        </button> -->
-
-        <!-- <button
-          @click="showHelp"
-          class="group bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-blue-500 hover:shadow-md transition-all duration-200 text-left"
-        >
-          <div class="flex flex-col items-center text-center">
-            <div
-              class="p-3 rounded-full bg-gray-50 text-gray-600 group-hover:bg-gray-100 transition-colors mb-3"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h4 class="font-semibold text-gray-900">Help & Support</h4>
-            <p class="text-sm text-gray-500 mt-1">Get assistance or FAQ</p>
-          </div>
-        </button> -->
+        />
       </div>
     </div>
 
@@ -236,8 +109,13 @@
           <p class="text-sm text-gray-500 mt-1">Your latest disaster damage assessments</p>
         </div>
         <button
-          @click="navigateToReports"
-          :disabled="disableBtn"
+          @click="handleNewReport"
+          :disabled="isNewReportDisabled"
+          :aria-label="
+            isNewReportDisabled
+              ? `Report submission disabled (max ${MAX_REPORTS} reports)`
+              : 'Submit new damage report'
+          "
           class="mt-3 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +140,7 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="reportStore?.reports?.total_reports.length === 0" class="p-8 text-center">
+      <div v-else-if="(reportStore.reports?.total_reports || 0) === 0" class="p-8 text-center">
         <div
           class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"
         >
@@ -295,114 +173,24 @@
 
       <!-- Reports List -->
       <div v-else class="divide-y divide-gray-200">
-        <div
-          v-for="report in reportStore?.reports?.all_reports"
+        <ReportListItem
+          v-for="(report, index) in reportStore.reports?.all_reports || []"
           :key="report.report_id"
+          :report="report"
+          :index="index"
           @click="viewReport(report.report_id)"
-          class="px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors group"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-              <div class="flex-shrink-0">
-                <div
-                  :class="[
-                    'w-10 h-10 rounded-lg flex items-center justify-center',
-                    report.status === 'Verified'
-                      ? 'bg-green-100 text-green-600'
-                      : report.status === 'Pending'
-                      ? 'bg-yellow-100 text-yellow-600'
-                      : 'bg-gray-100 text-gray-600',
-                  ]"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div>
-                <h4 class="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                  Damage Report #{{ report.report_id }}
-                </h4>
-                <div class="flex items-center space-x-3 mt-1">
-                  <span class="text-sm text-gray-500">
-                    <svg
-                      class="w-4 h-4 inline-block mr-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                    {{ formatDate(report.created_at) }}
-                  </span>
-                  <span class="text-sm text-gray-500">
-                    <svg
-                      class="w-4 h-4 inline-block mr-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    {{ report.total_residents_count }} family members
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center space-x-4">
-              <span
-                :class="[
-                  'px-3 py-1 rounded-full text-xs font-medium',
-                  report.status === 'verified'
-                    ? 'bg-green-100 text-green-800'
-                    : report.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-gray-800',
-                ]"
-              >
-                {{ report.report_status }}
-              </span>
-              <svg
-                class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
+        />
       </div>
 
       <!-- View All Reports Link -->
       <div
-        v-if="reportStore?.reports?.all_reports?.length > 1"
+        v-if="(reportStore.reports?.all_reports?.length || 0) > 5"
         class="px-6 py-4 border-t border-gray-200"
       >
         <button
           @click="viewAllReports"
-          class="disabled:text-blue-500 disabled:cursor-not-allowed text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+          class="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center"
+          aria-label="View all reports"
         >
           View all reports
           <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,11 +209,52 @@
     <div class="mt-8 text-center">
       <p class="text-sm text-gray-500">
         Need immediate assistance? Call our support line:
-        <a href="tel:1234-567-89-1234" class="text-blue-600 hover:text-blue-700 font-medium"
-          >1234-567-89-1234</a
-        >
+        <a href="tel:1234-567-89-1234" class="text-blue-600 hover:text-blue-700 font-medium">
+          1234-567-89-1234
+        </a>
       </p>
     </div>
+
+    <!-- Limit Reached Modal -->
+    <ReusableModal :is-open="showLimitModal" @close="closeLimitModal">
+      <template #icon>
+        <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+          <svg
+            class="w-10 h-10 text-yellow-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.282 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+        </div>
+      </template>
+
+      <template #title> Report Limit Reached </template>
+
+      <template #content>
+        <p class="text-gray-600">
+          You have reached the maximum limit of {{ MAX_REPORTS }} reports.
+        </p>
+        <p class="text-sm text-gray-500 mt-2">
+          Please contact support if you need to submit additional reports.
+        </p>
+      </template>
+
+      <template #actions>
+        <button
+          @click="closeLimitModal"
+          class="w-full px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Understand
+        </button>
+      </template>
+    </ReusableModal>
   </div>
 </template>
 
@@ -434,40 +263,56 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
 import { useReportStore } from '../store/reportsStore'
+import ReusableModal from '../components/modalVue.vue'
+import StatsCard from '../components/userDashboard/statusCard.vue'
+import QuickActionButton from '../components/userDashboard/quickActionsButtons.vue'
+import ReportListItem from '../components/userDashboard/reportListItem.vue'
+
+// No of reports limit for victims
+const MAX_REPORTS = 10
+
+// Router & Stores
+const router = useRouter()
 const store = useAuthStore()
 const reportStore = useReportStore()
-const router = useRouter()
 
 // State
 const isLoading = ref(true)
-const disableBtn = ref(false)
+const showLimitModal = ref(false)
+const currentDate = ref('')
 
-// Computed
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+// Minimal computed properties - only for business logic
+const isNewReportDisabled = computed(() => {
+  return (reportStore.reports?.total_reports || 0) >= MAX_REPORTS
+})
+
+const maskedPhoneNumber = computed(() => {
+  const phone = reportStore.reports?.phone_number || ''
+  if (phone.length <= 4) return phone
+  const visibleDigits = 4
+  const maskedPart = '*'.repeat(phone.length - visibleDigits)
+  return maskedPart + phone.slice(-visibleDigits)
 })
 
 // Methods
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+const refreshReports = async () => {
+  isLoading.value = true
+
+  try {
+    await reportStore.fetchReports()
+  } catch (error) {
+    console.error('Failed to refresh reports:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const refreshReports = () => {
-  isLoading.value = true
-  console.log('Refreshing reports...')
-  setTimeout(async () => {
-    isLoading.value = false
-    await fetchReports()
-  }, 1000)
+const handleNewReport = () => {
+  if (isNewReportDisabled.value) {
+    showLimitModal.value = true
+    return
+  }
+  createNewReport()
 }
 
 const createNewReport = () => {
@@ -475,38 +320,52 @@ const createNewReport = () => {
 }
 
 const viewReport = (id) => {
-  router.push(`/dashboard`)
+  router.push(`user/report/${id}`)
 }
 
 const viewAllReports = () => {
-  router.push('/dashboard')
+  router.push('/reports')
 }
-const navigateToReports = () => {
-  if (parseInt(reportStore?.reports?.total_reports) >= 0) {
-    disableBtn.value = true
-    return
-  }
 
-  router.push('/report')
+const closeLimitModal = () => {
+  showLimitModal.value = false
 }
+
 const fetchReports = async () => {
   try {
     await reportStore.fetchReports()
-  } catch (err) {
-    console.log(err)
-    if (err.response.data.statusCode === 401) {
-      console.log('unAuthorized')
+  } catch (error) {
+    console.error('Failed to load reports:', error)
+
+    // Handle 401 - redirect to login
+    if (error.response?.status === 401) {
       router.push('/login')
     }
   }
 }
+
+const initializeCurrentDate = () => {
+  currentDate.value = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
 // Lifecycle
 onMounted(async () => {
-  await store.userAuthStatus()
-  await fetchReports()
-  console.log(reportStore?.reports)
+  initializeCurrentDate()
 
-  isLoading.value = false
+  try {
+    await store.userAuthStatus()
+    await fetchReports()
+    console.log(reportStore?.reports)
+  } catch (error) {
+    console.error('Failed to initialize dashboard:', error)
+  } finally {
+    isLoading.value = false
+  }
 })
 </script>
 
@@ -523,30 +382,9 @@ onMounted(async () => {
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Custom scrollbar for the reports list */
 .divide-y > div {
   animation: fadeIn 0.3s ease-out;
   animation-fill-mode: both;
-}
-
-.divide-y > div:nth-child(1) {
-  animation-delay: 0.1s;
-}
-.divide-y > div:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.divide-y > div:nth-child(3) {
-  animation-delay: 0.3s;
-}
-.divide-y > div:nth-child(4) {
-  animation-delay: 0.4s;
-}
-.divide-y > div:nth-child(5) {
-  animation-delay: 0.5s;
 }
 
 /* Enhanced hover effects */
