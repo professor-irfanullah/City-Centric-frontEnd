@@ -10,6 +10,10 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/',
+      redirect: '/login' // Your guard will bounce them to /login if they aren't authed
+    },
+    {
       path: '/login',
       component: () => import('@/views/loginVue.vue'),
       meta: { public: true, }
