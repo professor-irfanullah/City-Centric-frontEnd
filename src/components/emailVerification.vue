@@ -185,22 +185,16 @@
             <p class="text-sm text-gray-600">
               Need help?
               <button
+                disabled
                 type="button"
                 @click="resendEmail"
-                class="text-blue-600 hover:text-blue-800 font-medium"
+                class="text-blue-600 hover:text-blue-800 font-medium disabled:cursor-not-allowed disabled:opacity-50 transition"
               >
                 Resend verification email
               </button>
             </p>
           </div>
         </form>
-      </div>
-
-      <!-- Demo Info -->
-      <div class="text-center text-sm text-gray-500">
-        <p>
-          Demo password: <span class="font-mono bg-gray-100 px-2 py-1 rounded">SecurePass123!</span>
-        </p>
       </div>
     </div>
   </div>
