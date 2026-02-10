@@ -40,7 +40,7 @@ const router = createRouter({
     },
     {
       path: '/admin-dashboard',
-      component: () => import('@/components/auth/victim/tempDashboardWithAnalytics.vue'),
+      component: () => import('@/views/adminDashboard.vue'),
       meta: {
         requiresAuth: true,
         allowedRoles: ['admin']
