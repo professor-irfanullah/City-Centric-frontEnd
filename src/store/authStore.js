@@ -22,6 +22,21 @@ export const useAuthStore = defineStore('auth', () => {
             throw error
         }
     }
+    const verifyEmailRegistration = async (password, token) => {
+        if (!password) throw new Error('Password is required for email verrification');
+        if (!token) throw new Error('Token is required for email verrification');
+
+
+        try {
+            const response = await api.post('/api/auth/verify', {
+                password: password,
+                token: token
+            })
+            return response.data;
+        } catch (error) {
+            throw error
+        }
+    }
     const login = async (email, password) => {
         try {
             const response = await api.post('/api/auth/login', {
@@ -42,5 +57,5 @@ export const useAuthStore = defineStore('auth', () => {
             return false
         }
     }
-    return { login, registerUser, userAuthStatus, userData }
+    return { login, registerUser, userAuthStatus, userData, verifyEmailRegistration }
 })
