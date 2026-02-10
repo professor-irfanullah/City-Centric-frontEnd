@@ -269,7 +269,7 @@ import QuickActionButton from '../components/userDashboard/quickActionsButtons.v
 import ReportListItem from '../components/userDashboard/reportListItem.vue'
 
 // No of reports limit for victims
-const MAX_REPORTS = 10
+const MAX_REPORTS = 1
 
 // Router & Stores
 const router = useRouter()
