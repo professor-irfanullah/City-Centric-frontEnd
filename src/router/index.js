@@ -35,7 +35,7 @@ const router = createRouter({
     },
     {
       path: '/verify-email',
-      component: () => import('@/components/auth/victim/emailVerification.vue'),
+      component: () => import('@/components/emailVerification.vue'),
       meta: { public: true, }
 
     },
