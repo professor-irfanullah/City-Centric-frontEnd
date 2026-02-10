@@ -34,6 +34,12 @@ const router = createRouter({
 
     },
     {
+      path: '/verify-email',
+      component: () => import('@/components/auth/victim/emailVerification.vue'),
+      meta: { public: true, }
+
+    },
+    {
       path: '/report',
       component: () => import('@/views/reportVue.vue'),
       meta: {
@@ -105,8 +111,8 @@ router.beforeEach(async (to, from, next) => {
   const store = useAuthStore()
 
   // 1. Identify "Guest-Only" routes (Login/Register)
-  const isGuestOnly = to.path === '/login' || to.path === '/register'
-  const wasGuestOnly = from.path === '/login' || from.path === '/register'
+  const isGuestOnly = to.path === '/login' || to.path === '/register' || to.path === '/verify-email'
+  const wasGuestOnly = from.path === '/login' || from.path === '/register' || from.path === '/verify-email'
 
   // 2. SKIP async check if navigating BETWEEN Login and Register
   if (isGuestOnly && wasGuestOnly) {
