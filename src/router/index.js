@@ -48,7 +48,7 @@ const router = createRouter({
     },
     {
       path: '/admin/reports',
-      component: () => import('@/components/auth/victim/reportLists.vue'),
+      component: () => import('@/views/adminReportsView.vue'),
       meta: {
         requiresAuth: true,
         allowedRoles: ['admin']
@@ -58,7 +58,7 @@ const router = createRouter({
     },
     {
       path: '/verify-admin',
-      component: () => import('@/components/auth/victim/adminPortal.vue'),
+      component: () => import('@/components/adminDashboard/adminPortal.vue'),
       meta: {
         public: true,
         allowedRoles: ['user']
@@ -74,7 +74,7 @@ const router = createRouter({
     },
     {
       path: '/admin/report/:id',
-      component: () => import('@/components/auth/victim/reportVue.vue'),
+      component: () => import('@/components/userDashboard/reportVue.vue'),
       meta: {
         requiresAuth: true,
         allowedRoles: ['admin']
