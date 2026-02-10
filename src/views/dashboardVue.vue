@@ -360,7 +360,6 @@ onMounted(async () => {
   try {
     await store.userAuthStatus()
     await fetchReports()
-    console.log(reportStore?.reports)
   } catch (error) {
     console.error('Failed to initialize dashboard:', error)
   } finally {
