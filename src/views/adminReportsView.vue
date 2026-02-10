@@ -1267,7 +1267,6 @@ onMounted(async () => {
     loading.value = true
     await store.fetchAllReports()
     reports.value = store?.reports ?? []
-    console.log(reports.value)
   } catch (error) {
     console.log(error)
   } finally {
