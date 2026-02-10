@@ -1,48 +1,136 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../store/authStore'
 
+const DASHBOARD_MAP = {
+  'user': '/dashboard',
+  'admin': '/admin-dashboard'
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/login',
-      component: () => import('@/views/loginVue.vue')
+      component: () => import('@/views/loginVue.vue'),
+      meta: { public: true, }
+
     },
     {
       path: '/register',
-      component: () => import('@/views/registerVue.vue')
+      component: () => import('@/views/registerVue.vue'),
+      meta: { public: true, }
+
     },
     {
       path: '/report',
-      component: () => import('@/views/reportVue.vue')
+      component: () => import('@/views/reportVue.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['user']
+      }
     },
     {
       path: '/dashboard',
-      component: () => import('@/views/dashboardVue.vue')
+      component: () => import('@/views/dashboardVue.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['user']
+      }
+
     },
     {
-      // we need to change it after we create the not found component
+      path: '/admin-dashboard',
+      component: () => import('@/components/auth/victim/tempDashboardWithAnalytics.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['admin']
+      }
+    },
+    {
+      path: '/admin/reports',
+      component: () => import('@/components/auth/victim/reportLists.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['admin']
+
+      }
+
+    },
+    {
+      path: '/verify-admin',
+      component: () => import('@/components/auth/victim/adminPortal.vue'),
+      meta: {
+        public: true,
+        allowedRoles: ['user']
+      }
+    },
+    {
+      path: '/user/report/:id',
+      component: () => import('@/components/userDashboard/AffectedReportDetail.vue'),
+      meta: {
+        public: true,
+        allowedRoles: ['user']
+      }
+    },
+    {
+      path: '/admin/report/:id',
+      component: () => import('@/components/auth/victim/reportVue.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['admin']
+
+      }
+
+    },
+    {
       path: '/:pathMatch(.*)*',
-      component: () => import('@/views/loginVue.vue')
+      component: () => import('@/views/notFound.vue')
     }
   ],
 })
 
-
-const authRoutes = ['/register', '/login', '/']
-const user_post_auth_routes = ['/dashboard', '/report']
 router.beforeEach(async (to, from, next) => {
   const store = useAuthStore()
-  let isAuth = await store.userAuthStatus()
 
-  // user is authenticated now now prevent him from going back to authroutes
-  if (isAuth && authRoutes.includes(to.path)) {
-    return next('/dashboard')
+  // 1. Identify "Guest-Only" routes (Login/Register)
+  const isGuestOnly = to.path === '/login' || to.path === '/register'
+  const wasGuestOnly = from.path === '/login' || from.path === '/register'
+
+  // 2. SKIP async check if navigating BETWEEN Login and Register
+  if (isGuestOnly && wasGuestOnly) {
+    return next()
   }
-  // now prevent the user from dashboard if not authenticated
-  if (!isAuth && user_post_auth_routes.includes(to.path)) {
+
+  // 3. Conditional Auth Check
+  // We only call isAuth if going to a protected route OR entering login from outside
+  let isAuth = store.isAuthenticated // Check synchronous property first
+  if (!isAuth && (to.meta.requiresAuth || isGuestOnly)) {
+    isAuth = await store.userAuthStatus()
+  }
+
+  const role = store?.userData?.role
+  const targetedDashboard = DASHBOARD_MAP[role] || '/dashboard'
+
+  // 4. PROTECTION: Block authenticated users from Guest pages (Login/Register)
+  if (isAuth && isGuestOnly) {
+    return next(targetedDashboard)
+  }
+
+  // 5. PROTECTION: Redirect unauthenticated users to login
+  if (!isAuth && to.meta.requiresAuth) {
     return next('/login')
   }
+
+  // 6. ROLE PROTECTION: Prevent Admin from User routes (and User from Admin routes)
+  // This specifically solves why your Admin could hit '/dashboard'
+  if (isAuth && to.meta.allowedRoles) {
+    if (!to.meta.allowedRoles.includes(role)) {
+      // If the current route is for 'user' but current user is 'admin', 
+      // redirect them to their correct 'admin' dashboard.
+      return next(targetedDashboard)
+    }
+  }
+
   next()
 })
 
