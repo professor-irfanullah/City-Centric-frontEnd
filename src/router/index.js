@@ -11,7 +11,15 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login' // Your guard will bounce them to /login if they aren't authed
+      redirect: () => {
+        const store = useAuthStore()
+        // Use the sync property to avoid calling the API
+        if (store.isAuthenticated) {
+          const role = store.userData?.role
+          return DASHBOARD_MAP[role] || '/dashboard'
+        }
+        return '/login'
+      }
     },
     {
       path: '/login',
