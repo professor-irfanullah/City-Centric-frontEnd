@@ -677,7 +677,7 @@
           <h3 class="text-lg font-semibold text-gray-900">Report Documentation</h3>
           <p class="text-sm text-gray-600 mt-1">Keep a copy for your records and reference</p>
         </div>
-        <div class="mt-4 sm:mt-0 space-x-3">
+        <div class="mt-4 sm:mt-0 space-x-3 space-y-2 sm:space-y-0">
           <button
             @click="printReport"
             class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -992,11 +992,6 @@ onMounted(() => {
     return
   }
   loadReport()
-
-  // Development only logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Loading report:', reportId.value)
-  }
 })
 
 // Cleanup
