@@ -1,7 +1,16 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-4 md:p-6">
+    <!-- ERROR BOUNDARY -->
+    <div v-if="hasError" class="bg-red-50 p-6 rounded-xl text-center">
+      <h2 class="text-lg font-semibold text-red-800">Something went wrong</h2>
+      <p class="text-red-600 mt-2">{{ errorMessage }}</p>
+      <button @click="resetError" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg">
+        Try Again
+      </button>
+    </div>
+
     <!-- LIST VIEW -->
-    <div v-if="viewMode === 'list'">
+    <div v-else-if="viewMode === 'list'">
       <!-- Header -->
       <div class="mb-8">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -12,10 +21,17 @@
           <div class="flex items-center gap-3">
             <button
               @click="refreshReports"
-              :disabled="loading"
+              :disabled="loading || refreshing"
+              :aria-label="loading ? 'Loading reports' : 'Refresh reports'"
+              :aria-busy="loading.toString()"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             >
-              <svg v-if="loading" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+              <svg
+                v-if="loading || refreshing"
+                class="animate-spin h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 <circle
                   class="opacity-25"
                   cx="12"
@@ -23,12 +39,12 @@
                   r="10"
                   stroke="currentColor"
                   stroke-width="4"
-                ></circle>
+                />
                 <path
                   class="opacity-75"
                   fill="currentColor"
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
+                />
               </svg>
               <svg
                 v-else
@@ -46,8 +62,8 @@
               </svg>
               Refresh
             </button>
-            <div class="text-sm text-gray-500">
-              Showing {{ filteredReports.length }} of {{ reports.length }} reports
+            <div class="text-sm text-gray-500" aria-live="polite">
+              Showing {{ filteredReports.length }} of {{ totalReports }} reports
             </div>
           </div>
         </div>
@@ -55,20 +71,28 @@
 
       <!-- Filters Section -->
       <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
+        <h2 class="text-lg font-semibold text-gray-800 mb-4" id="filters-heading">Filters</h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div
+          class="grid grid-cols-1 md:grid-cols-4 gap-4"
+          role="group"
+          aria-labelledby="filters-heading"
+        >
           <!-- District Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">District</label>
+            <label for="district-filter" class="block text-sm font-medium text-gray-700 mb-2"
+              >District</label
+            >
             <select
+              id="district-filter"
               v-model="filters.district"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @change="debouncedFilter"
             >
               <option value="">All Districts</option>
               <option
-                v-for="(district, index) in uniqueDistricts"
-                :key="index"
+                v-for="district in uniqueDistricts"
+                :key="district"
                 :value="district"
                 class="capitalize"
               >
@@ -79,11 +103,15 @@
 
           <!-- Tehsil Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Tehsil</label>
+            <label for="tehsil-filter" class="block text-sm font-medium text-gray-700 mb-2"
+              >Tehsil</label
+            >
             <select
+              id="tehsil-filter"
               v-model="filters.tehsil"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               :disabled="!filters.district"
+              @change="debouncedFilter"
             >
               <option value="">All Tehsils</option>
               <option
@@ -99,10 +127,14 @@
 
           <!-- Disaster Type Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Disaster Type</label>
+            <label for="disaster-filter" class="block text-sm font-medium text-gray-700 mb-2"
+              >Disaster Type</label
+            >
             <select
+              id="disaster-filter"
               v-model="filters.disasterType"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @change="debouncedFilter"
             >
               <option value="">All Types</option>
               <option value="flood">🌊 Flood</option>
@@ -114,10 +146,14 @@
 
           <!-- Verification Status Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-2"
+              >Status</label
+            >
             <select
+              id="status-filter"
               v-model="filters.verificationStatus"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @change="debouncedFilter"
             >
               <option value="">All Status</option>
               <option value="verified">✅ Verified</option>
@@ -130,25 +166,34 @@
         <!-- Date Range Filter -->
         <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+            <label for="from-date" class="block text-sm font-medium text-gray-700 mb-2"
+              >From Date</label
+            >
             <input
+              id="from-date"
               type="date"
               v-model="filters.fromDate"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @change="debouncedFilter"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+            <label for="to-date" class="block text-sm font-medium text-gray-700 mb-2"
+              >To Date</label
+            >
             <input
+              id="to-date"
               type="date"
               v-model="filters.toDate"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @change="debouncedFilter"
             />
           </div>
           <div class="flex items-end">
             <button
               @click="clearFilters"
               class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              aria-label="Clear all filters"
             >
               Clear Filters
             </button>
@@ -162,8 +207,13 @@
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-800">All Reports</h3>
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500">Sort by:</span>
-            <select v-model="sortBy" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+            <span class="text-sm text-gray-500" id="sort-label">Sort by:</span>
+            <select
+              v-model="sortBy"
+              class="px-3 py-1 border border-gray-300 rounded-lg text-sm"
+              aria-labelledby="sort-label"
+              @change="currentPage = 1"
+            >
               <option value="created_at">Date (Newest)</option>
               <option value="created_at_asc">Date (Oldest)</option>
               <option value="deaths_count">Deaths (High-Low)</option>
@@ -172,13 +222,14 @@
           </div>
         </div>
 
-        <!-- Loading State -->
-        <div v-if="loading" class="p-8 text-center">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p class="mt-4 text-gray-600">Loading reports...</p>
+        <!-- loading -->
+        <div v-if="loading" class="space-y-4">
+          <div v-for="n in 5" :key="n" class="animate-pulse">
+            <div class="h-12 bg-gray-200 rounded"></div>
+          </div>
         </div>
 
-        <!-- Empty State can be in a component-->
+        <!-- Empty State -->
         <div v-else-if="filteredReports.length === 0" class="p-8 text-center">
           <svg
             class="w-16 h-16 text-gray-400 mx-auto"
@@ -209,31 +260,37 @@
             <thead class="bg-gray-50">
               <tr>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   ID
                 </th>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Date & Type
                 </th>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Location
                 </th>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Impact
                 </th>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Status
                 </th>
                 <th
+                  scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Actions
@@ -246,66 +303,59 @@
                 :key="report.report_id"
                 class="hover:bg-gray-50 transition-colors"
               >
-                <!-- ID -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">#{{ report.report_id }}</div>
                 </td>
-
-                <!-- Date & Type -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900">{{ formatDate(report.created_at) }}</div>
                   <div class="text-sm text-gray-500 flex items-center mt-1">
-                    <span class="mr-2">{{ getDisasterEmoji(report.disaster_type) }}</span>
+                    <span class="mr-2" aria-hidden="true">{{
+                      getDisasterEmoji(report.disaster_type)
+                    }}</span>
                     {{ formatDisasterType(report.disaster_type) }}
                   </div>
                 </td>
-
-                <!-- Location -->
                 <td class="px-6 py-4">
                   <div class="text-sm font-medium text-gray-900 capitalize">
-                    {{ report.tehsil }}
+                    {{ report.tehsil || 'N/A' }}
                   </div>
-                  <div class="text-sm text-gray-500 capitalize">{{ report.district }}</div>
-                  <div class="text-xs text-gray-400 mt-1 capitalize">{{ report.village }}</div>
+                  <div class="text-sm text-gray-500 capitalize">{{ report.district || 'N/A' }}</div>
+                  <div class="text-xs text-gray-400 mt-1 capitalize">
+                    {{ report.village || 'N/A' }}
+                  </div>
                 </td>
-
-                <!-- Impact Summary -->
                 <td class="px-6 py-4">
                   <div class="space-y-1">
                     <div v-if="report.deaths_count > 0" class="flex items-center text-sm">
-                      <span class="text-red-600 mr-2">💀</span>
+                      <span class="text-red-600 mr-2" aria-hidden="true">💀</span>
                       <span class="font-medium">{{ report.deaths_count }} deaths</span>
                     </div>
                     <div v-if="report.injured_count > 0" class="flex items-center text-sm">
-                      <span class="text-orange-600 mr-2">🏥</span>
+                      <span class="text-orange-600 mr-2" aria-hidden="true">🏥</span>
                       <span class="font-medium">{{ report.injured_count }} injured</span>
                     </div>
                     <div v-if="report.is_home_impacted" class="flex items-center text-sm">
-                      <span class="text-red-500 mr-2">🏠</span>
+                      <span class="text-red-500 mr-2" aria-hidden="true">🏠</span>
                       <span class="font-medium">{{
                         formatDamageLevel(report.home_damage_level)
                       }}</span>
                     </div>
                     <div v-if="report.is_shop_impacted" class="flex items-center text-sm">
-                      <span class="text-blue-500 mr-2">🏪</span>
+                      <span class="text-blue-500 mr-2" aria-hidden="true">🏪</span>
                       <span class="font-medium">{{
                         formatDamageLevel(report.shop_damage_level)
                       }}</span>
                     </div>
                   </div>
                 </td>
-
-                <!-- Status -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
                     :class="getStatusClasses(report.verification_status)"
                     class="px-3 py-1 rounded-full text-xs font-medium"
                   >
-                    {{ formatStatus(report.report_status) }}
+                    {{ formatStatus(report.verification_status) }}
                   </span>
                 </td>
-
-                <!-- Actions -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     @click="viewReport(report.report_id)"
@@ -316,16 +366,20 @@
                   <button
                     v-if="report.verification_status === 'pending'"
                     @click="verifyReport(report.report_id)"
-                    class="text-green-600 hover:text-green-900 mr-4"
+                    :disabled="verifying[report.report_id]"
+                    class="text-green-600 hover:text-green-900 mr-4 disabled:opacity-50"
                   >
-                    Verify
+                    <span v-if="verifying[report.report_id]">Verifying...</span>
+                    <span v-else>Verify</span>
                   </button>
                   <button
                     v-if="report.verification_status === 'pending'"
                     @click="rejectReport(report.report_id)"
-                    class="text-red-600 hover:text-red-900"
+                    :disabled="rejecting[report.report_id]"
+                    class="text-red-600 hover:text-red-900 disabled:opacity-50"
                   >
-                    Reject
+                    <span v-if="rejecting[report.report_id]">Rejecting...</span>
+                    <span v-else>Reject</span>
                   </button>
                 </td>
               </tr>
@@ -339,8 +393,7 @@
           class="px-6 py-4 border-t border-gray-200 flex items-center justify-between"
         >
           <div class="text-sm text-gray-700">
-            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-            {{ Math.min(currentPage * itemsPerPage, filteredReports.length) }} of
+            Showing {{ paginationStart }} to {{ paginationEnd }} of
             {{ filteredReports.length }} results
           </div>
           <div class="flex items-center space-x-2">
@@ -348,6 +401,7 @@
               @click="prevPage"
               :disabled="currentPage === 1"
               class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous page"
             >
               Previous
             </button>
@@ -356,6 +410,7 @@
               @click="nextPage"
               :disabled="currentPage === totalPages"
               class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next page"
             >
               Next
             </button>
@@ -371,8 +426,15 @@
         <button
           @click="backToList"
           class="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          aria-label="Back to reports list"
         >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -386,7 +448,7 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl md:text-3xl font-bold text-gray-900">
-              Report #{{ selectedReport.id }}
+              Report #{{ selectedReport.report_id }}
             </h1>
             <div class="flex items-center gap-3 mt-2">
               <span
@@ -402,10 +464,37 @@
           <div class="flex items-center gap-3">
             <button
               v-if="selectedReport.verification_status === 'pending'"
-              @click="verifyReport(selectedReport.id)"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+              @click="verifyReport(selectedReport.report_id)"
+              :disabled="verifying[selectedReport.report_id]"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50"
             >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                v-if="verifying[selectedReport.report_id]"
+                class="animate-spin h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <svg
+                v-else
+                class="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -417,10 +506,37 @@
             </button>
             <button
               v-if="selectedReport.verification_status === 'pending'"
-              @click="rejectReport(selectedReport.id)"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+              @click="rejectReport(selectedReport.report_id)"
+              :disabled="rejecting[selectedReport.report_id]"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center disabled:opacity-50"
             >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                v-if="rejecting[selectedReport.report_id]"
+                class="animate-spin h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <svg
+                v-else
+                class="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -440,7 +556,9 @@
         <div class="bg-white rounded-xl shadow-lg p-6">
           <div class="flex items-center mb-6">
             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-              <span class="text-2xl">{{ getDisasterEmoji(selectedReport.disaster_type) }}</span>
+              <span class="text-2xl" aria-hidden="true">{{
+                getDisasterEmoji(selectedReport.disaster_type)
+              }}</span>
             </div>
             <div>
               <h2 class="text-xl font-bold text-gray-900">
@@ -451,52 +569,50 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- 👤 Personal Information -->
             <div class="space-y-3">
               <h3 class="font-semibold text-gray-700">👤 Personal Information</h3>
               <div class="space-y-2">
                 <div class="flex items-center">
                   <span class="text-gray-500 w-32 capitalize">Name:</span>
-                  <span class="font-medium capitalize">{{ selectedReport.name }}</span>
+                  <span class="font-medium capitalize">{{ selectedReport.name || 'N/A' }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-32">Father Name:</span>
-                  <span class="font-medium capitalize">{{ selectedReport.father_name }}</span>
+                  <span class="font-medium capitalize">{{
+                    selectedReport.father_name || 'N/A'
+                  }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-32">CNIC:</span>
-                  <span class="font-medium">{{ selectedReport.cnic }}</span>
+                  <span class="font-medium">{{ selectedReport.cnic || 'N/A' }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-32">Phone:</span>
-                  <span class="font-medium">{{ selectedReport.phone_number }}</span>
+                  <span class="font-medium">{{ selectedReport.phone_number || 'N/A' }}</span>
                 </div>
               </div>
             </div>
-            <!-- Location Info -->
             <div class="space-y-3">
               <h3 class="font-semibold text-gray-700">📍 Location Details</h3>
               <div class="space-y-2">
                 <div class="flex items-center">
                   <span class="text-gray-500 w-24">District:</span>
-                  <span class="font-medium capitalize">{{ selectedReport.district }}</span>
+                  <span class="font-medium capitalize">{{ selectedReport.district || 'N/A' }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-24">Tehsil:</span>
-                  <span class="font-medium capitalize">{{ selectedReport.tehsil }}</span>
+                  <span class="font-medium capitalize">{{ selectedReport.tehsil || 'N/A' }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-24 capitalize">Village:</span>
-                  <span class="font-medium capitalize">{{ selectedReport.village }}</span>
+                  <span class="font-medium capitalize">{{ selectedReport.village || 'N/A' }}</span>
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500 w-24">GPS:</span>
-                  <span class="font-medium text-sm">{{ selectedReport.location }}</span>
+                  <span class="font-medium text-sm">{{ selectedReport.location || 'N/A' }}</span>
                 </div>
               </div>
             </div>
-
-            <!-- Report Info -->
             <div class="space-y-3">
               <h3 class="font-semibold text-gray-700">📋 Report Information</h3>
               <div class="space-y-2">
@@ -514,32 +630,30 @@
                     :class="getStatusClasses(selectedReport.verification_status)"
                     class="px-2 py-1 rounded-full text-xs font-medium"
                   >
-                    {{ formatStatus(selectedReport.report_status) }}
+                    {{ formatStatus(selectedReport.verification_status) }}
                   </span>
                 </div>
               </div>
             </div>
-
-            <!-- Quick Impact -->
             <div class="space-y-3">
               <h3 class="font-semibold text-gray-700">⚡ Quick Impact</h3>
               <div class="space-y-2">
                 <div v-if="selectedReport.deaths_count > 0" class="flex items-center">
-                  <span class="text-red-600 mr-2">💀</span>
+                  <span class="text-red-600 mr-2" aria-hidden="true">💀</span>
                   <span class="font-medium">{{ selectedReport.deaths_count }} deaths</span>
                 </div>
                 <div v-if="selectedReport.injured_count > 0" class="flex items-center">
-                  <span class="text-orange-600 mr-2">🏥</span>
+                  <span class="text-orange-600 mr-2" aria-hidden="true">🏥</span>
                   <span class="font-medium">{{ selectedReport.injured_count }} injured</span>
                 </div>
                 <div v-if="selectedReport.is_home_impacted" class="flex items-center">
-                  <span class="text-red-500 mr-2">🏠</span>
+                  <span class="text-red-500 mr-2" aria-hidden="true">🏠</span>
                   <span class="font-medium"
                     >Home: {{ formatDamageLevel(selectedReport.home_damage_level) }}</span
                   >
                 </div>
                 <div v-if="selectedReport.is_shop_impacted" class="flex items-center">
-                  <span class="text-blue-500 mr-2">🏪</span>
+                  <span class="text-blue-500 mr-2" aria-hidden="true">🏪</span>
                   <span class="font-medium"
                     >Shop: {{ formatDamageLevel(selectedReport.shop_damage_level) }}</span
                   >
@@ -609,7 +723,7 @@
               </div>
             </div>
 
-            <!-- Home Damage Details -->
+            <!-- Home Damage Details - FIXED -->
             <div v-if="selectedReport.is_home_impacted" class="bg-white rounded-xl shadow-lg p-6">
               <h2 class="text-lg font-bold text-gray-900 mb-4">🏠 Home Damage Assessment</h2>
               <div class="space-y-4">
@@ -636,12 +750,15 @@
                       class="border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                       @click="openImage(selectedReport.home_image_url)"
                     >
-                      <!-- Replaced the placeholder div with an img tag -->
                       <div class="aspect-square bg-gray-100 flex items-center justify-center">
                         <img
                           :src="selectedReport.home_image_url"
-                          alt="Home Damage"
+                          :alt="
+                            'Home damage - ' + formatDamageLevel(selectedReport.home_damage_level)
+                          "
                           class="w-full h-full object-cover"
+                          @error="handleImageError($event, selectedReport.report_id, 'home')"
+                          loading="lazy"
                         />
                       </div>
                       <div class="p-3 text-sm text-center text-gray-600">Home Damage</div>
@@ -661,7 +778,6 @@
             >
               <h2 class="text-lg font-bold text-gray-900 mb-4">🐄 Animal Impact</h2>
               <div class="space-y-6">
-                <!-- Large Animals -->
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="font-medium text-gray-700 mb-3">
                     Large Animals (Cows, Buffaloes, etc.)
@@ -682,7 +798,6 @@
                   </div>
                 </div>
 
-                <!-- Small Animals -->
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="font-medium text-gray-700 mb-3">
                     Small Animals (Goats, Chickens, etc.)
@@ -703,22 +818,12 @@
                   </div>
                 </div>
 
-                <!-- Animal Summary -->
                 <div class="bg-green-50 p-4 rounded-lg">
                   <div class="flex items-center justify-between">
                     <div>
                       <div class="font-medium text-gray-700">Total Animal Impact</div>
                       <div class="text-sm text-gray-600">
-                        {{
-                          (selectedReport.big_animals_death_count || 0) +
-                          (selectedReport.small_animals_death_count || 0)
-                        }}
-                        deaths,
-                        {{
-                          (selectedReport.big_animals_injured_count || 0) +
-                          (selectedReport.small_animals_injured_count || 0)
-                        }}
-                        injured
+                        {{ totalAnimalDeaths }} deaths, {{ totalAnimalInjuries }} injured
                       </div>
                     </div>
                     <div class="text-xl font-bold text-green-600">
@@ -729,7 +834,7 @@
               </div>
             </div>
 
-            <!-- Shop Damage -->
+            <!-- Shop Damage - FIXED with Custom Logic -->
             <div v-if="selectedReport.is_shop_impacted" class="bg-white rounded-xl shadow-lg p-6">
               <h2 class="text-lg font-bold text-gray-900 mb-4">🏪 Shop/Business Impact</h2>
               <div class="space-y-4">
@@ -748,20 +853,48 @@
                   </span>
                 </div>
 
-                <!-- Shop Images -->
-                <div v-if="selectedReport.home_image_url">
-                  <h3 class="font-medium text-gray-700 mb-3">Home Damage Evidence</h3>
+                <!-- Shop Images - FIXED: Correct v-if and labels -->
+                <div v-if="selectedReport.shop_image_url">
+                  <h3 class="font-medium text-gray-700 mb-3">Shop Damage Evidence</h3>
                   <div class="grid grid-cols-1 gap-4">
                     <div
                       class="border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                       @click="openImage(selectedReport.shop_image_url)"
                     >
-                      <!-- Replaced the placeholder div with an img tag -->
                       <div class="aspect-square bg-gray-100 flex items-center justify-center">
                         <img
                           :src="selectedReport.shop_image_url"
-                          alt="Home Damage"
+                          :alt="
+                            'Shop damage - ' + formatDamageLevel(selectedReport.shop_damage_level)
+                          "
                           class="w-full h-full object-cover"
+                          @error="handleImageError($event, selectedReport.report_id, 'shop')"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div class="p-3 text-sm text-center text-gray-600">Shop Damage</div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Fallback if no image URL but shop_images array exists -->
+                <div
+                  v-else-if="selectedReport.shop_images && selectedReport.shop_images.length > 0"
+                >
+                  <h3 class="font-medium text-gray-700 mb-3">Shop Damage Evidence</h3>
+                  <div class="grid grid-cols-1 gap-4">
+                    <div
+                      class="border rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                      @click="openImage(selectedReport.shop_images[0])"
+                    >
+                      <div class="aspect-square bg-gray-100 flex items-center justify-center">
+                        <img
+                          :src="selectedReport.shop_images[0]"
+                          :alt="
+                            'Shop damage - ' + formatDamageLevel(selectedReport.shop_damage_level)
+                          "
+                          class="w-full h-full object-cover"
+                          @error="handleImageError($event, selectedReport.report_id, 'shop')"
+                          loading="lazy"
                         />
                       </div>
                       <div class="p-3 text-sm text-center text-gray-600">Shop Damage</div>
@@ -770,25 +903,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Verification Notes -->
-            <!-- <div class="bg-white rounded-xl shadow-lg p-6">
-              <h2 class="text-lg font-bold text-gray-900 mb-4">📝 Verification Notes</h2>
-              <textarea
-                v-model="verificationNotes"
-                placeholder="Add verification notes here..."
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows="3"
-              ></textarea>
-              <div class="mt-4 flex justify-end">
-                <button
-                  @click="saveNotes"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Save Notes
-                </button>
-              </div>
-            </div> -->
           </div>
         </div>
       </div>
@@ -797,21 +911,33 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import adminStore from '../store/adminStore.js'
-// store
+
+// Store
 const store = adminStore()
-// View Mode: 'list' or 'detail'
+
+// Error Handling
+const hasError = ref(false)
+const errorMessage = ref('')
+
+// View Mode
 const viewMode = ref('list')
 const selectedReport = ref(null)
 
 // State
-const reports = ref([])
 const loading = ref(false)
+const refreshing = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = 10
 const sortBy = ref('created_at')
-const verificationNotes = ref('')
+
+// Action States
+const verifying = ref({})
+const rejecting = ref({})
+
+// Debounce Timer
+let filterTimeout = null
 
 // Filters
 const filters = ref({
@@ -823,201 +949,120 @@ const filters = ref({
   toDate: '',
 })
 
-// Fetch reports
-const fetchReports = async () => {
-  loading.value = true
-  try {
-    // Mock data - same structure as your database
-    reports.value = [
-      {
-        id: 1,
-        disaster_type: 'flood',
-        location: '34.123456, 72.654321',
-        are_animals_impacted: true,
-        is_home_impacted: true,
-        is_shop_impacted: false,
-        home_damage_level: 'fully_destroyed',
-        shop_damage_level: null,
-        big_animals_death_count: 1,
-        big_animals_injured_count: 2,
-        small_animals_death_count: 3,
-        small_animals_injured_count: 5,
-        total_residents_count: 7,
-        deaths_count: 1,
-        injured_count: 2,
-        pregnant_women_count: 1,
-        disabled_persons_count: 0,
-        school_going_children_count: 3,
-        married_couples_count: 2,
-        district: 'Swat',
-        tehsil: 'Matta',
-        village: 'Khal',
-        created_at: '2024-01-15T10:30:00Z',
-        verification_status: 'verified',
-        home_images: ['home1.jpg', 'home2.jpg'],
-        shop_images: [],
-      },
-      {
-        id: 2,
-        disaster_type: 'flood',
-        location: '34.223456, 72.754321',
-        are_animals_impacted: true,
-        is_home_impacted: true,
-        is_shop_impacted: true,
-        home_damage_level: 'major',
-        shop_damage_level: 'minor',
-        big_animals_death_count: 0,
-        big_animals_injured_count: 1,
-        small_animals_death_count: 2,
-        small_animals_injured_count: 4,
-        total_residents_count: 5,
-        deaths_count: 0,
-        injured_count: 1,
-        pregnant_women_count: 0,
-        disabled_persons_count: 1,
-        school_going_children_count: 2,
-        married_couples_count: 1,
-        district: 'Swat',
-        tehsil: 'Kabal',
-        village: 'Bar Aba',
-        created_at: '2024-01-15T11:45:00Z',
-        verification_status: 'pending',
-        home_images: ['home3.jpg'],
-        shop_images: ['shop1.jpg'],
-      },
-      {
-        id: 3,
-        disaster_type: 'land_slide',
-        location: '34.323456, 72.854321',
-        are_animals_impacted: false,
-        is_home_impacted: true,
-        is_shop_impacted: false,
-        home_damage_level: 'minor',
-        shop_damage_level: null,
-        big_animals_death_count: 0,
-        big_animals_injured_count: 0,
-        small_animals_death_count: 0,
-        small_animals_injured_count: 0,
-        total_residents_count: 4,
-        deaths_count: 0,
-        injured_count: 0,
-        pregnant_women_count: 0,
-        disabled_persons_count: 0,
-        school_going_children_count: 1,
-        married_couples_count: 1,
-        district: 'Swat',
-        tehsil: 'Khwazakhela',
-        village: 'Thana',
-        created_at: '2024-01-15T12:15:00Z',
-        verification_status: 'pending',
-        home_images: ['home4.jpg'],
-        shop_images: [],
-      },
-      {
-        id: 4,
-        disaster_type: 'fire',
-        location: '34.523456, 73.054321',
-        are_animals_impacted: true,
-        is_home_impacted: true,
-        is_shop_impacted: true,
-        home_damage_level: 'fully_destroyed',
-        shop_damage_level: 'major',
-        big_animals_death_count: 1,
-        big_animals_injured_count: 0,
-        small_animals_death_count: 5,
-        small_animals_injured_count: 2,
-        total_residents_count: 8,
-        deaths_count: 1,
-        injured_count: 2,
-        pregnant_women_count: 1,
-        disabled_persons_count: 1,
-        school_going_children_count: 4,
-        married_couples_count: 2,
-        district: 'Swat',
-        tehsil: 'Kabal',
-        village: 'Fiza Gut',
-        created_at: '2024-01-14T14:30:00Z',
-        verification_status: 'verified',
-        home_images: ['home5.jpg', 'home6.jpg'],
-        shop_images: ['shop2.jpg', 'shop3.jpg'],
-      },
-      {
-        id: 5,
-        disaster_type: 'flood',
-        location: '34.623456, 73.154321',
-        are_animals_impacted: false,
-        is_home_impacted: true,
-        is_shop_impacted: false,
-        home_damage_level: 'major',
-        shop_damage_level: null,
-        big_animals_death_count: 0,
-        big_animals_injured_count: 0,
-        small_animals_death_count: 0,
-        small_animals_injured_count: 0,
-        total_residents_count: 6,
-        deaths_count: 0,
-        injured_count: 3,
-        pregnant_women_count: 1,
-        disabled_persons_count: 0,
-        school_going_children_count: 2,
-        married_couples_count: 2,
-        district: 'Swat',
-        tehsil: 'Matta',
-        village: 'Aman Kot',
-        created_at: '2024-01-13T16:45:00Z',
-        verification_status: 'rejected',
-        home_images: ['home7.jpg'],
-        shop_images: [],
-      },
-    ]
-  } catch (error) {
-    console.error('Error fetching reports:', error)
-  } finally {
-    loading.value = false
+// Custom Debounce Function
+const debouncedFilter = () => {
+  if (filterTimeout) {
+    clearTimeout(filterTimeout)
+  }
+  filterTimeout = setTimeout(() => {
+    currentPage.value = 1
+  }, 300)
+}
+
+// Helper Functions
+const normalizeReport = (report) => {
+  if (!report) return null
+
+  // Sanitize input to prevent XSS
+  const sanitize = (str) => {
+    if (!str) return str
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
+  return {
+    ...report,
+    report_id: report.report_id || report.id,
+    name: report.name ? sanitize(report.name) : 'N/A',
+    father_name: report.father_name ? sanitize(report.father_name) : 'N/A',
+    cnic: report.cnic ? sanitize(report.cnic) : 'N/A',
+    phone_number: report.phone_number ? sanitize(report.phone_number) : 'N/A',
+    district: report.district ? sanitize(report.district) : 'N/A',
+    tehsil: report.tehsil ? sanitize(report.tehsil) : 'N/A',
+    village: report.village ? sanitize(report.village) : 'N/A',
+    location: report.location ? sanitize(report.location) : 'N/A',
+    created_at: report.created_at || new Date().toISOString(),
+    verification_status: report.verification_status || 'pending',
+    disaster_type: report.disaster_type || 'unknown',
+    // Handle image URLs - prioritize image_url, fallback to first in array
+    home_image_url: report.home_image_url || (report.home_images && report.home_images[0]) || null,
+    shop_image_url: report.shop_image_url || (report.shop_images && report.shop_images[0]) || null,
+    // Keep original arrays for fallback
+    home_images: report.home_images || [],
+    shop_images: report.shop_images || [],
+    // Default numbers to 0
+    deaths_count: report.deaths_count || 0,
+    injured_count: report.injured_count || 0,
+    total_residents_count: report.total_residents_count || 0,
+    pregnant_women_count: report.pregnant_women_count || 0,
+    disabled_persons_count: report.disabled_persons_count || 0,
+    school_going_children_count: report.school_going_children_count || 0,
+    married_couples_count: report.married_couples_count || 0,
+    big_animals_death_count: report.big_animals_death_count || 0,
+    big_animals_injured_count: report.big_animals_injured_count || 0,
+    small_animals_death_count: report.small_animals_death_count || 0,
+    small_animals_injured_count: report.small_animals_injured_count || 0,
   }
 }
 
-// Computed properties
-const uniqueDistricts = computed(() => {
-  const districts = new Set()
-  reports.value.forEach((report) => {
-    if (report.district) districts.add(report.district.toLowerCase())
+// Custom Array Utilities
+const getUniqueValues = (array, key) => {
+  const unique = new Set()
+  array.forEach((item) => {
+    if (item[key]) {
+      unique.add(String(item[key]).toLowerCase())
+    }
   })
-  return Array.from(districts).sort()
+  return Array.from(unique).sort()
+}
+
+const filterByDistrict = (reports, district) => {
+  if (!district) return reports
+  return reports.filter((r) => r.district && r.district.toLowerCase() === district.toLowerCase())
+}
+
+// COMPUTED PROPERTIES
+const reports = computed(() => {
+  const storeReports = store.reports || []
+  return storeReports.map(normalizeReport)
+})
+
+const totalReports = computed(() => reports.value.length)
+
+const uniqueDistricts = computed(() => {
+  return getUniqueValues(reports.value, 'district')
 })
 
 const filteredTehsils = computed(() => {
   if (!filters.value.district) {
-    const tehsils = new Set()
-    reports.value.forEach((report) => {
-      if (report.tehsil) tehsils.add(report.tehsil.toLowerCase())
-    })
-
-    return Array.from(tehsils).sort()
+    return getUniqueValues(reports.value, 'tehsil')
   }
 
-  const tehsils = new Set()
-  reports.value.forEach((report) => {
-    if (
-      report.district.toLowerCase() === filters.value.district.toLowerCase() &&
-      report.tehsil.toLowerCase()
-    ) {
-      tehsils.add(report.tehsil.toLowerCase())
-    }
-  })
-  return Array.from(tehsils).sort()
+  const filtered = filterByDistrict(reports.value, filters.value.district)
+  return getUniqueValues(filtered, 'tehsil')
 })
 
 const filteredReports = computed(() => {
   return reports.value.filter((report) => {
     // District filter
-    if (filters.value.district && report.district.toLowerCase() !== filters.value.district) {
-      return false
+    if (filters.value.district) {
+      if (
+        !report.district ||
+        report.district.toLowerCase() !== filters.value.district.toLowerCase()
+      ) {
+        return false
+      }
     }
 
     // Tehsil filter
-    if (filters.value.tehsil && report.tehsil.toLowerCase() !== filters.value.tehsil) {
-      return false
+    if (filters.value.tehsil) {
+      if (!report.tehsil || report.tehsil.toLowerCase() !== filters.value.tehsil.toLowerCase()) {
+        return false
+      }
     }
 
     // Disaster type filter
@@ -1028,21 +1073,26 @@ const filteredReports = computed(() => {
     // Verification status filter
     if (
       filters.value.verificationStatus &&
-      report.report_status !== filters.value.verificationStatus
+      report.verification_status !== filters.value.verificationStatus
     ) {
       return false
     }
 
     // Date range filter
-    const reportDate = new Date(report.created_at)
-    if (filters.value.fromDate) {
-      const fromDate = new Date(filters.value.fromDate)
-      if (reportDate < fromDate) return false
-    }
-    if (filters.value.toDate) {
-      const toDate = new Date(filters.value.toDate)
-      toDate.setHours(23, 59, 59, 999) // End of day
-      if (reportDate > toDate) return false
+    if (filters.value.fromDate || filters.value.toDate) {
+      const reportDate = new Date(report.created_at)
+
+      if (filters.value.fromDate) {
+        const fromDate = new Date(filters.value.fromDate)
+        fromDate.setUTCHours(0, 0, 0, 0)
+        if (reportDate < fromDate) return false
+      }
+
+      if (filters.value.toDate) {
+        const toDate = new Date(filters.value.toDate)
+        toDate.setUTCHours(23, 59, 59, 999)
+        if (reportDate > toDate) return false
+      }
     }
 
     return true
@@ -1060,7 +1110,11 @@ const sortedReports = computed(() => {
     case 'deaths_count':
       return sorted.sort((a, b) => (b.deaths_count || 0) - (a.deaths_count || 0))
     case 'district':
-      return sorted.sort((a, b) => (a.district || '').localeCompare(b.district || ''))
+      return sorted.sort((a, b) => {
+        const districtA = a.district || ''
+        const districtB = b.district || ''
+        return districtA.localeCompare(districtB)
+      })
     default:
       return sorted
   }
@@ -1073,24 +1127,60 @@ const paginatedReports = computed(() => {
 })
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredReports.value.length / itemsPerPage)
+  return Math.ceil(filteredReports.value.length / itemsPerPage) || 1
 })
 
-const totalAnimalImpact = computed(() => {
+const paginationStart = computed(() => {
+  return filteredReports.value.length ? (currentPage.value - 1) * itemsPerPage + 1 : 0
+})
+
+const paginationEnd = computed(() => {
+  return Math.min(currentPage.value * itemsPerPage, filteredReports.value.length)
+})
+
+const totalAnimalDeaths = computed(() => {
   if (!selectedReport.value) return 0
   return (
     (selectedReport.value.big_animals_death_count || 0) +
-    (selectedReport.value.small_animals_death_count || 0) +
+    (selectedReport.value.small_animals_death_count || 0)
+  )
+})
+
+const totalAnimalInjuries = computed(() => {
+  if (!selectedReport.value) return 0
+  return (
     (selectedReport.value.big_animals_injured_count || 0) +
     (selectedReport.value.small_animals_injured_count || 0)
   )
 })
 
+const totalAnimalImpact = computed(() => {
+  return totalAnimalDeaths.value + totalAnimalInjuries.value
+})
+
 // Methods
-const refreshReports = async () => {
-  await store.fetchAllReports()
-  currentPage.value = 1
+const fetchReports = async (showRefreshing = false) => {
+  if (showRefreshing) {
+    refreshing.value = true
+  } else {
+    loading.value = true
+  }
+
+  try {
+    await store.fetchAllReports()
+    currentPage.value = 1
+    hasError.value = false
+  } catch (error) {
+    console.error('Error fetching reports:', error)
+    hasError.value = true
+    errorMessage.value = error.message || 'Failed to load reports'
+  } finally {
+    loading.value = false
+    refreshing.value = false
+  }
 }
+
+const refreshReports = () => fetchReports(true)
 
 const clearFilters = () => {
   filters.value = {
@@ -1105,13 +1195,21 @@ const clearFilters = () => {
 }
 
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return 'Invalid Date'
+  }
 }
 
 const formatDisasterType = (type) => {
@@ -1121,7 +1219,7 @@ const formatDisasterType = (type) => {
     land_slide: 'Landslide',
     earthquake: 'Earthquake',
   }
-  return types[type] || type
+  return types[type] || type || 'Unknown'
 }
 
 const getDisasterEmoji = (type) => {
@@ -1140,7 +1238,7 @@ const formatDamageLevel = (level) => {
     major: 'Minor Damage',
     fully_destroyed: 'Complete Destruction',
   }
-  return levels[level] || level
+  return levels[level] || level || 'Unknown'
 }
 
 const formatStatus = (status) => {
@@ -1149,7 +1247,7 @@ const formatStatus = (status) => {
     pending: 'Pending',
     rejected: 'Rejected',
   }
-  return statuses[status] || status
+  return statuses[status] || status || 'Unknown'
 }
 
 const getStatusClasses = (status) => {
@@ -1172,7 +1270,7 @@ const getDamageLevelClasses = (level) => {
 
 const getDamageDescription = (level) => {
   const descriptions = {
-    minor: 'Water & silk damage only',
+    minor: 'Water & silt damage only',
     major: '1 room or boundary wall damaged',
     fully_destroyed: '2 or more rooms completely destroyed',
   }
@@ -1191,60 +1289,73 @@ const viewReport = (reportId) => {
 const backToList = () => {
   viewMode.value = 'list'
   selectedReport.value = null
-  verificationNotes.value = ''
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const verifyReport = async (reportId) => {
-  if (confirm('Are you sure you want to verify this report?')) {
-    try {
-      // Update the report status
-      const report = reports.value.find((r) => r.report_id === reportId)
-      if (report) {
-        report.verification_status = 'verified'
-        if (reportId === selectedReport.value?.id) {
-          selectedReport.value.verification_status = 'verified'
-        }
+  if (!confirm('Are you sure you want to verify this report?')) return
+
+  verifying.value[reportId] = true
+  try {
+    await store.verifyReport(reportId)
+
+    // Update local state
+    const report = reports.value.find((r) => r.report_id === reportId)
+    if (report) {
+      report.verification_status = 'verified'
+      if (selectedReport.value?.report_id === reportId) {
+        selectedReport.value.verification_status = 'verified'
       }
-    } catch (error) {
-      console.error('Error verifying report:', error)
     }
+  } catch (error) {
+    console.error('Error verifying report:', error)
+    alert('Failed to verify report. Please try again.')
+  } finally {
+    verifying.value[reportId] = false
   }
 }
 
 const rejectReport = async (reportId) => {
-  if (confirm('Are you sure you want to reject this report?')) {
-    try {
-      // Update the report status
-      const report = reports.value.find((r) => r.report_id === reportId)
-      if (report) {
-        report.verification_status = 'rejected'
-        if (reportId === selectedReport.value?.id) {
-          selectedReport.value.verification_status = 'rejected'
-        }
+  if (!confirm('Are you sure you want to reject this report?')) return
+
+  rejecting.value[reportId] = true
+  try {
+    await store.rejectReport(reportId)
+
+    // Update local state
+    const report = reports.value.find((r) => r.report_id === reportId)
+    if (report) {
+      report.verification_status = 'rejected'
+      if (selectedReport.value?.report_id === reportId) {
+        selectedReport.value.verification_status = 'rejected'
       }
-    } catch (error) {
-      console.error('Error rejecting report:', error)
     }
+  } catch (error) {
+    console.error('Error rejecting report:', error)
+    alert('Failed to reject report. Please try again.')
+  } finally {
+    rejecting.value[reportId] = false
   }
 }
 
 const openImage = (imageUrl) => {
-  // In real app, open image in modal or new tab
-  window.open(imageUrl, '_blank')
+  if (imageUrl) {
+    // Basic sanitization for URL
+    const sanitizedUrl = String(imageUrl).replace(/[^\w\s/:.?=&-]/gi, '')
+    window.open(sanitizedUrl, '_blank', 'noopener,noreferrer')
+  }
 }
 
-const saveNotes = async () => {
-  try {
-    // Save notes to the selected report
-    if (selectedReport.value) {
-      // In real app, make API call to save notes
-      // await api.saveNotes(selectedReport.value.id, verificationNotes.value)
-      alert('Notes saved successfully')
-    }
-  } catch (error) {
-    console.error('Error saving notes:', error)
-  }
+const handleImageError = (e, reportId, type) => {
+  console.warn(`Failed to load ${type} image for report ${reportId}`)
+  e.target.src = '/placeholder-image.jpg'
+  e.target.alt = 'Image failed to load'
+}
+
+const resetError = () => {
+  hasError.value = false
+  errorMessage.value = ''
+  fetchReports()
 }
 
 const nextPage = () => {
@@ -1261,16 +1372,20 @@ const prevPage = () => {
   }
 }
 
+// Watchers
+watch(currentPage, () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+})
+
 // Lifecycle
 onMounted(async () => {
-  try {
-    loading.value = true
-    await store.fetchAllReports()
-    reports.value = store?.reports ?? []
-  } catch (error) {
-    console.log(error)
-  } finally {
-    loading.value = false
+  await fetchReports()
+})
+
+// Cleanup
+onUnmounted(() => {
+  if (filterTimeout) {
+    clearTimeout(filterTimeout)
   }
 })
 </script>
@@ -1320,6 +1435,14 @@ tbody tr:hover {
   transition-property: opacity;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 /* Responsive design */
