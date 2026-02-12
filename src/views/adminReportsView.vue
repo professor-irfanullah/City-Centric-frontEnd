@@ -127,9 +127,9 @@
 
           <!-- Disaster Type Filter -->
           <div>
-            <label for="disaster-filter" class="block text-sm font-medium text-gray-700 mb-2"
-              >Disaster Type</label
-            >
+            <label for="disaster-filter" class="block text-sm font-medium text-gray-700 mb-2">
+              Disaster Type
+            </label>
             <select
               id="disaster-filter"
               v-model="filters.disasterType"
@@ -137,10 +137,9 @@
               @change="debouncedFilter"
             >
               <option value="">All Types</option>
-              <option value="flood">🌊 Flood</option>
-              <option value="fire">🔥 Fire</option>
-              <option value="land_slide">🏔️ Landslide</option>
-              <option value="earthquake">🌋 Earthquake</option>
+              <option v-for="type in disasterTypes" :key="type.value" :value="type.value">
+                {{ type.emoji }} {{ type.label }}
+              </option>
             </select>
           </div>
 
@@ -912,11 +911,37 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import adminStore from '../store/adminStore.js'
+import useAdminStore from '../store/adminStore.js'
 
-// Store
-const store = adminStore()
+// ============= STORE =============
+const store = useAdminStore()
 
+// ============= CONSTANTS (Static configs only) =============
+const STATUS_CONFIG = Object.freeze({
+  verified: { label: 'Verified', class: 'bg-green-100 text-green-800', emoji: '✅' },
+  pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-800', emoji: '⏳' },
+  rejected: { label: 'Rejected', class: 'bg-red-100 text-red-800', emoji: '❌' },
+})
+
+const DAMAGE_LEVELS = Object.freeze({
+  minor: {
+    label: 'Only water & silt',
+    class: 'bg-yellow-100 text-yellow-800',
+    description: 'Water & silt damage only',
+  },
+  major: {
+    label: 'Minor Damage',
+    class: 'bg-orange-100 text-orange-800',
+    description: '1 room or boundary wall damaged',
+  },
+  fully_destroyed: {
+    label: 'Complete Destruction',
+    class: 'bg-red-100 text-red-800',
+    description: '2 or more rooms completely destroyed',
+  },
+})
+
+// ============= STATE =============
 // Error Handling
 const hasError = ref(false)
 const errorMessage = ref('')
@@ -925,16 +950,16 @@ const errorMessage = ref('')
 const viewMode = ref('list')
 const selectedReport = ref(null)
 
-// State
+// UI State
 const loading = ref(false)
 const refreshing = ref(false)
 const currentPage = ref(1)
-const itemsPerPage = 10
+const itemsPerPage = ref(10)
 const sortBy = ref('created_at')
 
-// Action States
-const verifying = ref({})
-const rejecting = ref({})
+// Action States - Using Set for O(1) performance
+const verifying = ref(new Set())
+const rejecting = ref(new Set())
 
 // Debounce Timer
 let filterTimeout = null
@@ -949,128 +974,79 @@ const filters = ref({
   toDate: '',
 })
 
-// Custom Debounce Function
-const debouncedFilter = () => {
-  if (filterTimeout) {
-    clearTimeout(filterTimeout)
-  }
-  filterTimeout = setTimeout(() => {
-    currentPage.value = 1
-  }, 300)
-}
+// ============= COMPUTED =============
 
-// Helper Functions
-const normalizeReport = (report) => {
-  if (!report) return null
-
-  // Sanitize input to prevent XSS
-  const sanitize = (str) => {
-    if (!str) return str
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-  }
-
-  return {
-    ...report,
-    report_id: report.report_id || report.id,
-    name: report.name ? sanitize(report.name) : 'N/A',
-    father_name: report.father_name ? sanitize(report.father_name) : 'N/A',
-    cnic: report.cnic ? sanitize(report.cnic) : 'N/A',
-    phone_number: report.phone_number ? sanitize(report.phone_number) : 'N/A',
-    district: report.district ? sanitize(report.district) : 'N/A',
-    tehsil: report.tehsil ? sanitize(report.tehsil) : 'N/A',
-    village: report.village ? sanitize(report.village) : 'N/A',
-    location: report.location ? sanitize(report.location) : 'N/A',
-    created_at: report.created_at || new Date().toISOString(),
-    verification_status: report.verification_status || 'pending',
-    disaster_type: report.disaster_type || 'unknown',
-    // Handle image URLs - prioritize image_url, fallback to first in array
-    home_image_url: report.home_image_url || (report.home_images && report.home_images[0]) || null,
-    shop_image_url: report.shop_image_url || (report.shop_images && report.shop_images[0]) || null,
-    // Keep original arrays for fallback
-    home_images: report.home_images || [],
-    shop_images: report.shop_images || [],
-    // Default numbers to 0
-    deaths_count: report.deaths_count || 0,
-    injured_count: report.injured_count || 0,
-    total_residents_count: report.total_residents_count || 0,
-    pregnant_women_count: report.pregnant_women_count || 0,
-    disabled_persons_count: report.disabled_persons_count || 0,
-    school_going_children_count: report.school_going_children_count || 0,
-    married_couples_count: report.married_couples_count || 0,
-    big_animals_death_count: report.big_animals_death_count || 0,
-    big_animals_injured_count: report.big_animals_injured_count || 0,
-    small_animals_death_count: report.small_animals_death_count || 0,
-    small_animals_injured_count: report.small_animals_injured_count || 0,
-  }
-}
-
-// Custom Array Utilities
-const getUniqueValues = (array, key) => {
-  const unique = new Set()
-  array.forEach((item) => {
-    if (item[key]) {
-      unique.add(String(item[key]).toLowerCase())
-    }
-  })
-  return Array.from(unique).sort()
-}
-
-const filterByDistrict = (reports, district) => {
-  if (!district) return reports
-  return reports.filter((r) => r.district && r.district.toLowerCase() === district.toLowerCase())
-}
-
-// COMPUTED PROPERTIES
-const reports = computed(() => {
-  const storeReports = store.reports || []
-  return storeReports.map(normalizeReport)
-})
+// Direct from store - NO NORMALIZATION NEEDED!
+const reports = computed(() => store.reports || [])
 
 const totalReports = computed(() => reports.value.length)
 
+// ============= DYNAMIC DROPDOWN VALUES =============
+
+// ✅ DYNAMIC: Unique districts from actual data
 const uniqueDistricts = computed(() => {
-  return getUniqueValues(reports.value, 'district')
+  const districts = new Set()
+  reports.value.forEach((report) => {
+    if (report.district) districts.add(report.district)
+  })
+  return Array.from(districts).sort()
 })
 
+// ✅ DYNAMIC: Unique tehsils filtered by district
 const filteredTehsils = computed(() => {
   if (!filters.value.district) {
-    return getUniqueValues(reports.value, 'tehsil')
+    const tehsils = new Set()
+    reports.value.forEach((report) => {
+      if (report.tehsil) tehsils.add(report.tehsil)
+    })
+    return Array.from(tehsils).sort()
   }
 
-  const filtered = filterByDistrict(reports.value, filters.value.district)
-  return getUniqueValues(filtered, 'tehsil')
+  const tehsils = new Set()
+  reports.value.forEach((report) => {
+    if (report.district === filters.value.district && report.tehsil) {
+      tehsils.add(report.tehsil)
+    }
+  })
+  return Array.from(tehsils).sort()
 })
 
+// ✅ DYNAMIC: Unique disaster types from actual data with emojis
+const disasterTypes = computed(() => {
+  const types = new Set()
+  reports.value.forEach((report) => {
+    if (report.disaster_type) types.add(report.disaster_type)
+  })
+
+  // Convert to array with emojis
+  return Array.from(types)
+    .sort()
+    .map((type) => ({
+      value: type,
+      label: formatDisasterType(type),
+      emoji: getDisasterEmoji(type),
+    }))
+})
+
+// Filter reports
 const filteredReports = computed(() => {
   return reports.value.filter((report) => {
     // District filter
-    if (filters.value.district) {
-      if (
-        !report.district ||
-        report.district.toLowerCase() !== filters.value.district.toLowerCase()
-      ) {
-        return false
-      }
+    if (filters.value.district && report.district !== filters.value.district) {
+      return false
     }
 
     // Tehsil filter
-    if (filters.value.tehsil) {
-      if (!report.tehsil || report.tehsil.toLowerCase() !== filters.value.tehsil.toLowerCase()) {
-        return false
-      }
+    if (filters.value.tehsil && report.tehsil !== filters.value.tehsil) {
+      return false
     }
 
-    // Disaster type filter
+    // ✅ DYNAMIC: Disaster type filter
     if (filters.value.disasterType && report.disaster_type !== filters.value.disasterType) {
       return false
     }
 
-    // Verification status filter
+    // Status filter
     if (
       filters.value.verificationStatus &&
       report.verification_status !== filters.value.verificationStatus
@@ -1080,18 +1056,16 @@ const filteredReports = computed(() => {
 
     // Date range filter
     if (filters.value.fromDate || filters.value.toDate) {
-      const reportDate = new Date(report.created_at)
+      const reportTime = new Date(report.created_at).getTime()
 
       if (filters.value.fromDate) {
-        const fromDate = new Date(filters.value.fromDate)
-        fromDate.setUTCHours(0, 0, 0, 0)
-        if (reportDate < fromDate) return false
+        const fromTime = new Date(filters.value.fromDate).setHours(0, 0, 0, 0)
+        if (reportTime < fromTime) return false
       }
 
       if (filters.value.toDate) {
-        const toDate = new Date(filters.value.toDate)
-        toDate.setUTCHours(23, 59, 59, 999)
-        if (reportDate > toDate) return false
+        const toTime = new Date(filters.value.toDate).setHours(23, 59, 59, 999)
+        if (reportTime > toTime) return false
       }
     }
 
@@ -1099,45 +1073,45 @@ const filteredReports = computed(() => {
   })
 })
 
+// Sorted reports
 const sortedReports = computed(() => {
   const sorted = [...filteredReports.value]
 
   switch (sortBy.value) {
     case 'created_at':
-      return sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      return sorted.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
     case 'created_at_asc':
-      return sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      return sorted.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
     case 'deaths_count':
       return sorted.sort((a, b) => (b.deaths_count || 0) - (a.deaths_count || 0))
     case 'district':
-      return sorted.sort((a, b) => {
-        const districtA = a.district || ''
-        const districtB = b.district || ''
-        return districtA.localeCompare(districtB)
-      })
+      return sorted.sort((a, b) => (a.district || '').localeCompare(b.district || ''))
     default:
       return sorted
   }
 })
 
+// Pagination
 const paginatedReports = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return sortedReports.value.slice(start, end)
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  return sortedReports.value.slice(start, start + itemsPerPage.value)
 })
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredReports.value.length / itemsPerPage) || 1
-})
+const totalPages = computed(() => Math.ceil(filteredReports.value.length / itemsPerPage.value) || 1)
 
-const paginationStart = computed(() => {
-  return filteredReports.value.length ? (currentPage.value - 1) * itemsPerPage + 1 : 0
-})
+const paginationStart = computed(() =>
+  filteredReports.value.length ? (currentPage.value - 1) * itemsPerPage.value + 1 : 0
+)
 
-const paginationEnd = computed(() => {
-  return Math.min(currentPage.value * itemsPerPage, filteredReports.value.length)
-})
+const paginationEnd = computed(() =>
+  Math.min(currentPage.value * itemsPerPage.value, filteredReports.value.length)
+)
 
+// Animal impact totals
 const totalAnimalDeaths = computed(() => {
   if (!selectedReport.value) return 0
   return (
@@ -1154,11 +1128,93 @@ const totalAnimalInjuries = computed(() => {
   )
 })
 
-const totalAnimalImpact = computed(() => {
-  return totalAnimalDeaths.value + totalAnimalInjuries.value
-})
+const totalAnimalImpact = computed(() => totalAnimalDeaths.value + totalAnimalInjuries.value)
 
-// Methods
+// ============= FORMATTING FUNCTIONS =============
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return 'Invalid Date'
+  }
+}
+
+// ✅ DYNAMIC: Format disaster type with proper capitalization
+const formatDisasterType = (type) => {
+  if (!type) return 'Unknown'
+
+  // Convert snake_case to Title Case
+  return type
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+// ✅ DYNAMIC: Get emoji for disaster type
+const getDisasterEmoji = (type) => {
+  const emojiMap = {
+    flood: '🌊',
+    fire: '🔥',
+    land_slide: '🏔️',
+    landslide: '🏔️',
+    earthquake: '🌋',
+    storm: '🌪️',
+    drought: '🏜️',
+    cyclone: '🌀',
+    tornado: '🌪️',
+    tsunami: '🌊',
+    volcano: '🌋',
+    epidemic: '🦠',
+    famine: '🍽️',
+    accident: '🚗',
+    industrial: '🏭',
+    war: '💥',
+    terror: '💣',
+    other: '⚠️',
+  }
+
+  return emojiMap[type] || '🌪️'
+}
+
+const formatDamageLevel = (level) => {
+  return DAMAGE_LEVELS[level]?.label || level || 'Unknown'
+}
+
+const getDamageDescription = (level) => {
+  return DAMAGE_LEVELS[level]?.description || 'Damage reported'
+}
+
+const getDamageLevelClasses = (level) => {
+  return DAMAGE_LEVELS[level]?.class || 'bg-gray-100 text-gray-800'
+}
+
+const formatStatus = (status) => {
+  return STATUS_CONFIG[status]?.label || status || 'Unknown'
+}
+
+const getStatusClasses = (status) => {
+  return STATUS_CONFIG[status]?.class || 'bg-gray-100 text-gray-800'
+}
+
+// ============= METHODS =============
+
+const debouncedFilter = () => {
+  if (filterTimeout) clearTimeout(filterTimeout)
+  filterTimeout = setTimeout(() => {
+    currentPage.value = 1
+  }, 300)
+}
+
 const fetchReports = async (showRefreshing = false) => {
   if (showRefreshing) {
     refreshing.value = true
@@ -1170,10 +1226,11 @@ const fetchReports = async (showRefreshing = false) => {
     await store.fetchAllReports()
     currentPage.value = 1
     hasError.value = false
+    errorMessage.value = ''
   } catch (error) {
-    console.error('Error fetching reports:', error)
+    console.error('Fetch reports error:', error)
     hasError.value = true
-    errorMessage.value = error.message || 'Failed to load reports'
+    errorMessage.value = error.response?.data?.message || 'Failed to load reports'
   } finally {
     loading.value = false
     refreshing.value = false
@@ -1194,89 +1251,6 @@ const clearFilters = () => {
   currentPage.value = 1
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return 'Invalid Date'
-
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return 'Invalid Date'
-  }
-}
-
-const formatDisasterType = (type) => {
-  const types = {
-    flood: 'Flood',
-    fire: 'Fire',
-    land_slide: 'Landslide',
-    earthquake: 'Earthquake',
-  }
-  return types[type] || type || 'Unknown'
-}
-
-const getDisasterEmoji = (type) => {
-  const emojis = {
-    flood: '🌊',
-    fire: '🔥',
-    land_slide: '🏔️',
-    earthquake: '🌋',
-  }
-  return emojis[type] || '🌪️'
-}
-
-const formatDamageLevel = (level) => {
-  const levels = {
-    minor: 'Only water & silt',
-    major: 'Minor Damage',
-    fully_destroyed: 'Complete Destruction',
-  }
-  return levels[level] || level || 'Unknown'
-}
-
-const formatStatus = (status) => {
-  const statuses = {
-    verified: 'Verified',
-    pending: 'Pending',
-    rejected: 'Rejected',
-  }
-  return statuses[status] || status || 'Unknown'
-}
-
-const getStatusClasses = (status) => {
-  const classes = {
-    verified: 'bg-green-100 text-green-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    rejected: 'bg-red-100 text-red-800',
-  }
-  return classes[status] || 'bg-gray-100 text-gray-800'
-}
-
-const getDamageLevelClasses = (level) => {
-  const classes = {
-    minor: 'bg-yellow-100 text-yellow-800',
-    major: 'bg-orange-100 text-orange-800',
-    fully_destroyed: 'bg-red-100 text-red-800',
-  }
-  return classes[level] || 'bg-gray-100 text-gray-800'
-}
-
-const getDamageDescription = (level) => {
-  const descriptions = {
-    minor: 'Water & silt damage only',
-    major: '1 room or boundary wall damaged',
-    fully_destroyed: '2 or more rooms completely destroyed',
-  }
-  return descriptions[level] || 'Damage reported'
-}
-
 const viewReport = (reportId) => {
   const report = reports.value.find((r) => r.report_id === reportId)
   if (report) {
@@ -1295,11 +1269,11 @@ const backToList = () => {
 const verifyReport = async (reportId) => {
   if (!confirm('Are you sure you want to verify this report?')) return
 
-  verifying.value[reportId] = true
+  verifying.value.add(reportId)
+
   try {
     await store.verifyReport(reportId)
 
-    // Update local state
     const report = reports.value.find((r) => r.report_id === reportId)
     if (report) {
       report.verification_status = 'verified'
@@ -1308,21 +1282,21 @@ const verifyReport = async (reportId) => {
       }
     }
   } catch (error) {
-    console.error('Error verifying report:', error)
+    console.error('Verify error:', error)
     alert('Failed to verify report. Please try again.')
   } finally {
-    verifying.value[reportId] = false
+    verifying.value.delete(reportId)
   }
 }
 
 const rejectReport = async (reportId) => {
   if (!confirm('Are you sure you want to reject this report?')) return
 
-  rejecting.value[reportId] = true
+  rejecting.value.add(reportId)
+
   try {
     await store.rejectReport(reportId)
 
-    // Update local state
     const report = reports.value.find((r) => r.report_id === reportId)
     if (report) {
       report.verification_status = 'rejected'
@@ -1331,25 +1305,29 @@ const rejectReport = async (reportId) => {
       }
     }
   } catch (error) {
-    console.error('Error rejecting report:', error)
+    console.error('Reject error:', error)
     alert('Failed to reject report. Please try again.')
   } finally {
-    rejecting.value[reportId] = false
+    rejecting.value.delete(reportId)
   }
 }
 
 const openImage = (imageUrl) => {
   if (imageUrl) {
-    // Basic sanitization for URL
-    const sanitizedUrl = String(imageUrl).replace(/[^\w\s/:.?=&-]/gi, '')
-    window.open(sanitizedUrl, '_blank', 'noopener,noreferrer')
+    try {
+      const url = new URL(imageUrl, window.location.origin)
+      window.open(url.href, '_blank', 'noopener,noreferrer')
+    } catch {
+      console.warn('Invalid image URL:', imageUrl)
+    }
   }
 }
 
 const handleImageError = (e, reportId, type) => {
   console.warn(`Failed to load ${type} image for report ${reportId}`)
   e.target.src = '/placeholder-image.jpg'
-  e.target.alt = 'Image failed to load'
+  e.target.alt = 'Image unavailable'
+  e.target.onerror = null
 }
 
 const resetError = () => {
@@ -1372,17 +1350,16 @@ const prevPage = () => {
   }
 }
 
-// Watchers
+// ============= WATCHERS =============
 watch(currentPage, () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 })
 
-// Lifecycle
+// ============= LIFECYCLE =============
 onMounted(async () => {
   await fetchReports()
 })
 
-// Cleanup
 onUnmounted(() => {
   if (filterTimeout) {
     clearTimeout(filterTimeout)
