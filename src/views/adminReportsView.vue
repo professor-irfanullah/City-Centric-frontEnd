@@ -976,8 +976,16 @@ const filters = ref({
 
 // ============= COMPUTED =============
 
-// Direct from store - NO NORMALIZATION NEEDED!
-const reports = computed(() => store.reports || [])
+// ✅ FIXED - Maps report_status to verification_status
+const reports = computed(() => {
+  return (store.reports || []).map((report) => ({
+    ...report,
+    // 🎯 CRITICAL: Map the status field
+    verification_status: report.verification_status || report.report_status || 'pending',
+    // Optional: cache timestamp for performance
+    _timestamp: new Date(report.created_at).getTime(),
+  }))
+})
 
 const totalReports = computed(() => reports.value.length)
 
@@ -1053,19 +1061,17 @@ const filteredReports = computed(() => {
     ) {
       return false
     }
-
-    // Date range filter
+    // Date range filter - USE CACHED TIMESTAMP
     if (filters.value.fromDate || filters.value.toDate) {
-      const reportTime = new Date(report.created_at).getTime()
-
+      // ✅ Use _timestamp instead of creating new Date()
       if (filters.value.fromDate) {
         const fromTime = new Date(filters.value.fromDate).setHours(0, 0, 0, 0)
-        if (reportTime < fromTime) return false
+        if (report._timestamp < fromTime) return false
       }
 
       if (filters.value.toDate) {
         const toTime = new Date(filters.value.toDate).setHours(23, 59, 59, 999)
-        if (reportTime > toTime) return false
+        if (report._timestamp > toTime) return false
       }
     }
 
