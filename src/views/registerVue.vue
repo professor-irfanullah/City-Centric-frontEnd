@@ -316,11 +316,54 @@
             </div>
           </div>
 
-          <!-- Village/Muhalla -->
+          <!-- Village (Separated) -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-              Village / Muhalla <span class="text-red-500">*</span>
-              <span class="text-xs text-gray-500 mr-2">(گاؤں / محلہ)</span>
+              Village <span class="text-red-500">*</span>
+              <span class="text-xs text-gray-500 mr-2">(گاؤں)</span>
+            </label>
+            <div class="relative">
+              <input
+                v-model="form.village"
+                type="text"
+                required
+                :class="[
+                  'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all',
+                  villageError ? 'border-red-300 bg-red-50' : 'border-gray-300',
+                ]"
+                placeholder="Enter village name"
+                @blur="validateVillage"
+                :dir="form.village ? 'ltr' : 'auto'"
+              />
+              <div class="absolute right-3 top-3.5">
+                <svg
+                  class="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Muhalla (Separated) -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Muhalla <span class="text-red-500">*</span>
+              <span class="text-xs text-gray-500 mr-2">(محلہ)</span>
             </label>
             <div class="relative">
               <input
@@ -331,7 +374,7 @@
                   'w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all',
                   muhallaError ? 'border-red-300 bg-red-50' : 'border-gray-300',
                 ]"
-                placeholder="Enter village/muhalla name"
+                placeholder="Enter muhalla name"
                 @blur="validateMuhalla"
                 :dir="form.muhalla ? 'ltr' : 'auto'"
               />
@@ -552,12 +595,13 @@ const router = useRouter()
 const form = reactive({
   name: '',
   father: '',
-  email: '', // Added email field
+  email: '',
   cnic: '',
   phone: '',
   district: '',
   tehsil: '',
-  muhalla: '',
+  village: '', // Added village field
+  muhalla: '', // Added muhalla field
   password: '',
   confirmPassword: '',
   terms: false,
@@ -574,12 +618,13 @@ let toastInterval = null
 // Validation errors
 const nameError = ref('')
 const fatherError = ref('')
-const emailError = ref('') // Added email error
+const emailError = ref('')
 const cnicError = ref('')
 const phoneError = ref('')
 const districtError = ref('')
 const tehsilError = ref('')
-const muhallaError = ref('')
+const villageError = ref('') // Added village error
+const muhallaError = ref('') // Added muhalla error
 const passwordError = ref('')
 const confirmPasswordError = ref('')
 const termsError = ref('')
@@ -654,7 +699,8 @@ const errorSummary = computed(() => {
   if (phoneError.value) errors.push({ field: 'phone', message: phoneError.value })
   if (districtError.value) errors.push({ field: 'district', message: districtError.value })
   if (tehsilError.value) errors.push({ field: 'tehsil', message: tehsilError.value })
-  if (muhallaError.value) errors.push({ field: 'village/muhalla', message: muhallaError.value })
+  if (villageError.value) errors.push({ field: 'village', message: villageError.value })
+  if (muhallaError.value) errors.push({ field: 'muhalla', message: muhallaError.value })
   if (passwordError.value) errors.push({ field: 'password', message: passwordError.value })
   if (confirmPasswordError.value)
     errors.push({ field: 'confirm password', message: confirmPasswordError.value })
@@ -765,11 +811,23 @@ const validateTehsil = () => {
   }
 }
 
+// Added village validation
+const validateVillage = () => {
+  if (!form.village.trim()) {
+    villageError.value = 'Village is required'
+  } else if (form.village.length < 3) {
+    villageError.value = 'Please enter a valid village name'
+  } else {
+    villageError.value = ''
+  }
+}
+
+// Updated muhalla validation
 const validateMuhalla = () => {
   if (!form.muhalla.trim()) {
-    muhallaError.value = 'Village/Muhalla is required'
+    muhallaError.value = 'Muhalla is required'
   } else if (form.muhalla.length < 3) {
-    muhallaError.value = 'Please enter a valid village/muhalla name'
+    muhallaError.value = 'Please enter a valid muhalla name'
   } else {
     muhallaError.value = ''
   }
@@ -848,7 +906,8 @@ const validateAllFields = () => {
   validatePhoneNumber()
   validateDistrict()
   validateTehsil()
-  validateMuhalla()
+  validateVillage() // Added village validation
+  validateMuhalla() // Added muhalla validation
   validatePassword()
   validateConfirmPassword()
   validateTerms()
@@ -870,19 +929,19 @@ const register = async () => {
     // Get district and tehsil names from IDs
     const districtName = districts.value.find((d) => d.id === form.district)?.name || ''
     const tehsilName = tehsils.value.find((t) => t.id === form.tehsil)?.name || ''
+
     const response = await store.registerUser(
       form.name,
       form.father,
       form.email,
       form.cnic,
       form.phone,
-      form.muhalla,
+      form.village, // Send village
+      form.muhalla, // Send muhalla
       tehsilName,
       districtName,
       form.password
     )
-
-    console.log('Registration successful:', response.data)
     responseMessage.value = response.data.msg
   } catch (err) {
     console.error('Registration error:', err)
