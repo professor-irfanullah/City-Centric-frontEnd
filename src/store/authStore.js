@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 export const useAuthStore = defineStore('auth', () => {
     let userData = ref(null)
-    const registerUser = async (name, father_name, email, cnic, contact, muhalla, tehsil, district, password) => {
+    const registerUser = async (name, father_name, email, cnic, contact, muhalla, village, tehsil, district, password) => {
         try {
             const response = await api.post('/api/auth/register', {
                 name: name,
@@ -12,7 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
                 cnic: cnic,
                 contact: contact,
                 muhalla: muhalla,
-                village: muhalla, // Using muhalla as village
+                village: village, // Using muhalla as village
                 tehsil: tehsil,
                 district: district,
                 password: password,
