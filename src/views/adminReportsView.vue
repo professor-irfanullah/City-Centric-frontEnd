@@ -229,29 +229,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="filteredReports.length === 0" class="p-8 text-center">
-          <svg
-            class="w-16 h-16 text-gray-400 mx-auto"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1"
-              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 class="mt-4 text-lg font-medium text-gray-900">No reports found</h3>
-          <p class="mt-2 text-gray-500">Try adjusting your filters or check back later.</p>
-          <button
-            @click="clearFilters"
-            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Clear All Filters
-          </button>
-        </div>
+        <EmptyState v-else-if="filteredReports.length === 0" @clearFilters="clearFilters" />
 
         <!-- Reports Table -->
         <div v-else class="overflow-x-auto">
@@ -362,24 +340,6 @@
                   >
                     View
                   </button>
-                  <button
-                    v-if="report.verification_status === 'pending'"
-                    @click="verifyReport(report.report_id)"
-                    :disabled="verifying[report.report_id]"
-                    class="text-green-600 hover:text-green-900 mr-4 disabled:opacity-50"
-                  >
-                    <span v-if="verifying[report.report_id]">Verifying...</span>
-                    <span v-else>Verify</span>
-                  </button>
-                  <button
-                    v-if="report.verification_status === 'pending'"
-                    @click="rejectReport(report.report_id)"
-                    :disabled="rejecting[report.report_id]"
-                    class="text-red-600 hover:text-red-900 disabled:opacity-50"
-                  >
-                    <span v-if="rejecting[report.report_id]">Rejecting...</span>
-                    <span v-else>Reject</span>
-                  </button>
                 </td>
               </tr>
             </tbody>
@@ -418,7 +378,7 @@
       </div>
     </div>
 
-    <!-- DETAIL VIEW -->
+    <!-- DETAIL VIEW copied from here -->
     <div v-else-if="viewMode === 'detail' && selectedReport">
       <!-- Header with Back Button -->
       <div class="mb-8">
@@ -912,7 +872,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import useAdminStore from '../store/adminStore.js'
-
+import adminDetailReport from '@/components/adminReports/adminDetailReport.vue'
+import EmptyState from '@/components/adminReports/emptyState.vue'
+import router from '@/router/index.js'
 // ============= STORE =============
 const store = useAdminStore()
 
@@ -1261,8 +1223,8 @@ const viewReport = (reportId) => {
   const report = reports.value.find((r) => r.report_id === reportId)
   if (report) {
     selectedReport.value = report
-    viewMode.value = 'detail'
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const routeData = router.resolve(`/admin/report/${report.report_id}`)
+    window.open(routeData.href, '_blank')
   }
 }
 
@@ -1275,47 +1237,47 @@ const backToList = () => {
 const verifyReport = async (reportId) => {
   if (!confirm('Are you sure you want to verify this report?')) return
 
-  verifying.value.add(reportId)
+  // verifying.value.add(reportId)
 
-  try {
-    await store.verifyReport(reportId)
+  // try {
+  //   await store.verifyReport(reportId)
 
-    const report = reports.value.find((r) => r.report_id === reportId)
-    if (report) {
-      report.verification_status = 'verified'
-      if (selectedReport.value?.report_id === reportId) {
-        selectedReport.value.verification_status = 'verified'
-      }
-    }
-  } catch (error) {
-    console.error('Verify error:', error)
-    alert('Failed to verify report. Please try again.')
-  } finally {
-    verifying.value.delete(reportId)
-  }
+  //   const report = reports.value.find((r) => r.report_id === reportId)
+  //   if (report) {
+  //     report.verification_status = 'verified'
+  //     if (selectedReport.value?.report_id === reportId) {
+  //       selectedReport.value.verification_status = 'verified'
+  //     }
+  //   }
+  // } catch (error) {
+  //   console.error('Verify error:', error)
+  //   alert('Failed to verify report. Please try again.')
+  // } finally {
+  //   verifying.value.delete(reportId)
+  // }
 }
 
 const rejectReport = async (reportId) => {
   if (!confirm('Are you sure you want to reject this report?')) return
 
-  rejecting.value.add(reportId)
+  // rejecting.value.add(reportId)
 
-  try {
-    await store.rejectReport(reportId)
+  // try {
+  //   await store.rejectReport(reportId)
 
-    const report = reports.value.find((r) => r.report_id === reportId)
-    if (report) {
-      report.verification_status = 'rejected'
-      if (selectedReport.value?.report_id === reportId) {
-        selectedReport.value.verification_status = 'rejected'
-      }
-    }
-  } catch (error) {
-    console.error('Reject error:', error)
-    alert('Failed to reject report. Please try again.')
-  } finally {
-    rejecting.value.delete(reportId)
-  }
+  //   const report = reports.value.find((r) => r.report_id === reportId)
+  //   if (report) {
+  //     report.verification_status = 'rejected'
+  //     if (selectedReport.value?.report_id === reportId) {
+  //       selectedReport.value.verification_status = 'rejected'
+  //     }
+  //   }
+  // } catch (error) {
+  //   console.error('Reject error:', error)
+  //   alert('Failed to reject report. Please try again.')
+  // } finally {
+  //   rejecting.value.delete(reportId)
+  // }
 }
 
 const openImage = (imageUrl) => {
