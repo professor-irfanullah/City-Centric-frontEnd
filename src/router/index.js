@@ -75,6 +75,14 @@ const router = createRouter({
 
     },
     {
+      path: '/admin/report/:id',
+      component: () => import('@/views/adminDetailReport.vue'),
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['admin']
+      }
+    },
+    {
       path: '/verify-admin',
       component: () => import('@/components/adminDashboard/adminPortal.vue'),
       meta: {
