@@ -2,53 +2,81 @@
   <div class="min-h-screen bg-gray-50 p-4 md:p-6">
     <!-- Header with Navigation Tabs -->
     <div class="mb-8">
-      <div class="flex justify-between items-center mb-4">
-        <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Disaster Response Dashboard</h1>
-          <p class="text-gray-600 mt-1">
-            Comprehensive disaster impact analysis across all districts
-          </p>
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+        <div class="flex flex-col xs:flex-row xs:items-center gap-3">
+          <h1 class="text-xl md:text-2xl lg:text-4xl font-bold text-gray-900">
+            Disaster Response Dashboard
+          </h1>
+          <router-link
+            to="/admin/reports"
+            class="inline-flex items-center justify-center xs:justify-start px-4 py-2.5 sm:py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 w-full xs:w-auto"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span>View All Reports</span>
+          </router-link>
         </div>
-        <div class="text-sm text-gray-500">
+
+        <!-- Time - aligned right on mobile -->
+        <div class="text-sm text-gray-500 text-right">
           {{ currentTime }}
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="flex space-x-1 border-b">
-        <button
-          @click="activeTab = 'global'"
-          :class="[
-            'px-4 py-2 font-medium text-sm rounded-t-lg transition-colors',
-            activeTab === 'global'
-              ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-          ]"
-        >
-          🌍 Global Overview
-        </button>
-        <button
-          @click="activeTab = 'districts'"
-          :class="[
-            'px-4 py-2 font-medium text-sm rounded-t-lg transition-colors',
-            activeTab === 'districts'
-              ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-          ]"
-        >
-          🏙️ Districts
-        </button>
-        <button
-          @click="activeTab = 'tehsils'"
-          :class="[
-            'px-4 py-2 font-medium text-sm rounded-t-lg transition-colors',
-            activeTab === 'tehsils'
-              ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
-          ]"
-        >
-          🏘️ Tehsils
-        </button>
+      <!-- Description paragraph - responsive text -->
+      <p class="text-sm sm:text-base text-gray-600 mt-1 mb-4">
+        Comprehensive disaster impact analysis across all districts
+      </p>
+
+      <!-- Navigation Tabs - scrollable on mobile -->
+      <div class="overflow-x-auto pb-1 -mx-2 px-2">
+        <div class="flex space-x-1 border-b min-w-max">
+          <button
+            @click="activeTab = 'global'"
+            :class="[
+              'px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm rounded-t-lg transition-colors whitespace-nowrap',
+              activeTab === 'global'
+                ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+            ]"
+          >
+            🌍 Global Overview
+          </button>
+          <button
+            @click="activeTab = 'districts'"
+            :class="[
+              'px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm rounded-t-lg transition-colors whitespace-nowrap',
+              activeTab === 'districts'
+                ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+            ]"
+          >
+            🏙️ Districts
+          </button>
+          <button
+            @click="activeTab = 'tehsils'"
+            :class="[
+              'px-3 sm:px-4 py-2 font-medium text-xs sm:text-sm rounded-t-lg transition-colors whitespace-nowrap',
+              activeTab === 'tehsils'
+                ? 'bg-white border border-gray-300 border-b-0 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+            ]"
+          >
+            🏘️ Tehsils
+          </button>
+        </div>
       </div>
     </div>
 
@@ -118,7 +146,8 @@
               {{ globalStats.totalAnimals.toLocaleString() }}
             </div>
             <div class="text-sm text-gray-500 mt-1">
-              {{ globalStats.totalAnimalDeaths.toLocaleString() }} deaths
+              {{ globalStats.totalAnimalDeaths.toLocaleString() }}D •
+              {{ globalStats.totalAnimalInjuries }}I
             </div>
           </div>
         </div>
@@ -912,29 +941,13 @@ const globalStats = computed(() => {
   return {
     totalReports: parseInt(firstDistrict.global_total_reports),
     totalDeaths: parseInt(firstDistrict.global_total_deaths),
-    totalInjuries: dashboardData.value.reduce(
-      (sum, district) => sum + parseInt(district.district_total_injuries),
-      0
-    ),
-    totalResidents: dashboardData.value.reduce(
-      (sum, district) => sum + parseInt(district.district_total_residents),
-      0
-    ),
-    totalAnimals: dashboardData.value.reduce(
-      (sum, district) =>
-        sum +
-        parseInt(district.district_total_animal_deaths) +
-        parseInt(district.district_total_animal_injuries),
-      0
-    ),
-    totalAnimalDeaths: dashboardData.value.reduce(
-      (sum, district) => sum + parseInt(district.district_total_animal_deaths),
-      0
-    ),
-    totalAnimalInjuries: dashboardData.value.reduce(
-      (sum, district) => sum + parseInt(district.district_total_animal_injuries),
-      0
-    ),
+    totalInjuries: parseInt(firstDistrict.global_total_injuries),
+    totalResidents: parseInt(firstDistrict.global_total_residents),
+    totalAnimals:
+      parseInt(firstDistrict.global_total_animals_death_count) +
+      parseInt(firstDistrict.global_total_animals_injured_count),
+    totalAnimalDeaths: parseInt(firstDistrict.global_total_animals_death_count),
+    totalAnimalInjuries: parseInt(firstDistrict.global_total_animals_injured_count),
   }
 })
 
