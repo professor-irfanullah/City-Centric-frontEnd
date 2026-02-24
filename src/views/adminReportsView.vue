@@ -13,18 +13,51 @@
     <div v-else-if="viewMode === 'list'">
       <!-- Header -->
       <div class="mb-8">
+        <!-- Main header section with responsive stacking -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Disaster Reports</h1>
-            <p class="text-gray-600 mt-2">Manage and review all submitted reports</p>
+          <!-- Left side: Title and Dashboard navigation -->
+          <div class="flex flex-col xs:flex-row xs:items-center gap-3">
+            <div>
+              <h1 class="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
+                Disaster Reports
+              </h1>
+              <p class="text-sm sm:text-base text-gray-600 mt-1 md:mt-2">
+                Manage and review all submitted reports
+              </p>
+            </div>
+
+            <!-- Dashboard Navigation Button - responsive -->
+            <router-link
+              to="/admin-dashboard"
+              class="inline-flex items-center justify-center xs:justify-start px-4 py-2.5 sm:py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 w-full xs:w-auto mt-2 xs:mt-0"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                />
+              </svg>
+              <span>View Dashboard</span>
+            </router-link>
           </div>
-          <div class="flex items-center gap-3">
+
+          <!-- Right side: Actions and counter - stacked on mobile -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <!-- Refresh Button - full width on mobile -->
             <button
               @click="refreshReports"
               :disabled="loading || refreshing"
               :aria-label="loading ? 'Loading reports' : 'Refresh reports'"
               :aria-busy="loading.toString()"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              class="px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-full sm:w-auto"
             >
               <svg
                 v-if="loading || refreshing"
@@ -62,7 +95,12 @@
               </svg>
               Refresh
             </button>
-            <div class="text-sm text-gray-500" aria-live="polite">
+
+            <!-- Counter - centered on mobile -->
+            <div
+              class="text-sm text-gray-500 text-center sm:text-right px-2 py-1 bg-gray-50 rounded-lg sm:bg-transparent"
+              aria-live="polite"
+            >
               Showing {{ filteredReports.length }} of {{ totalReports }} reports
             </div>
           </div>
