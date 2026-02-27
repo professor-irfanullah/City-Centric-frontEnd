@@ -193,9 +193,13 @@
               @change="debouncedFilter"
             >
               <option value="">All Status</option>
+              <option v-for="status in dynamicStatus" :key="status" :value="status.value">
+                {{ status.emoji }} {{ status.formated }}
+              </option>
+              <!-- <option value="">All Status</option>
               <option value="verified">✅ Verified</option>
               <option value="pending">⏳ Pending</option>
-              <option value="rejected">❌ Rejected</option>
+              <option value="rejected">❌ Rejected</option> -->
             </select>
           </div>
         </div>
@@ -505,6 +509,20 @@ const uniqueDistricts = computed(() => {
   })
   return Array.from(districts).sort()
 })
+// unique reports status dynmic from data
+const dynamicStatus = computed(() => {
+  const status = new Set()
+  reports.value.forEach((report) => {
+    if (report.verification_status) status.add(report.verification_status)
+  })
+  return Array.from(status)
+    .sort()
+    .map((report) => ({
+      value: report,
+      formated: formatReportStatus(report),
+      emoji: getReportStatusEmoji(report),
+    }))
+})
 
 // ✅ DYNAMIC: Unique tehsils filtered by district
 const filteredTehsils = computed(() => {
@@ -652,6 +670,14 @@ const formatDisasterType = (type) => {
     .join(' ')
 }
 
+const formatReportStatus = (status) => {
+  if (!status) return 'Unknown'
+
+  return status
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 // ✅ DYNAMIC: Get emoji for disaster type
 const getDisasterEmoji = (type) => {
   const emojiMap = {
@@ -677,7 +703,15 @@ const getDisasterEmoji = (type) => {
 
   return emojiMap[type] || '🌪️'
 }
+const getReportStatusEmoji = (status) => {
+  const emojiMap = {
+    pending: '⏳',
+    verified: '✅',
+    rejected: '❌',
+  }
 
+  return emojiMap[status] || '⚠️'
+}
 const formatDamageLevel = (level) => {
   return DAMAGE_LEVELS[level]?.label || level || 'Unknown'
 }
