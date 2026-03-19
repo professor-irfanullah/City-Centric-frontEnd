@@ -96,7 +96,7 @@ const router = createRouter({
     // super admin system analytics of the system
     {
       path: '/super-admin/system-analytics', // Added this
-      component: () => import('@/components/auth/victim/superAdminSystemAnalytics.vue'),
+      component: () => import('@/views/superAdminSystemAnalytics.vue'),
       meta: {
         requiresAuth: true,
         allowedRoles: ['super_admin']

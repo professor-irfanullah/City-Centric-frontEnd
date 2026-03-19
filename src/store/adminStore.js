@@ -52,7 +52,23 @@ const adminStore = defineStore("adminReports", () => {
             throw error
         }
     }
-    return { fetchAllReports, reports, fetchAdminAnalytics, analytics, fetchSingleReport, downloadReportInPDF };
+    const getAllAdminsInfo = async () => {
+        try {
+            const response = await api.get('/api/admin/get/admins');
+            return response.data
+        } catch (error) {
+            throw error
+        }
+    }
+    const inviteAdminToTheSystem = async (cnic) => {
+        try {
+            const response = await api.post('/api/admin/invite/admin', { cnic: cnic })
+            return response.data
+        } catch (error) {
+            throw error
+        }
+    }
+    return { fetchAllReports, reports, fetchAdminAnalytics, analytics, fetchSingleReport, downloadReportInPDF, getAllAdminsInfo, inviteAdminToTheSystem };
 
 })
 export default adminStore;
