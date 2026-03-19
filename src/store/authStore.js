@@ -49,13 +49,39 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
     const userAuthStatus = async () => {
+        // 1. If we already have a user, don't call the API again
+        if (userData.value) return true
+
         try {
             const response = await api.get('/api/auth/protected')
             userData.value = response.data
             return true
         } catch (error) {
+            userData.value = null // Clear on failure
             return false
         }
     }
-    return { login, registerUser, userAuthStatus, userData, verifyEmailRegistration }
+    const forgotPassword = async (email) => {
+        try {
+            const response = await api.post('/api/auth/forgot-password', {
+                email: email
+            })
+            return response.data
+        } catch (error) {
+            throw error
+        }
+    }
+    const reset_password = async (payload) => {
+        try {
+            const response = await api.post('/api/auth/reset-password', {
+                token: payload.token,
+                reset_password: payload.reset_password,
+                email: payload.email
+            })
+            return response.data
+        } catch (error) {
+            throw error;
+        }
+    }
+    return { login, registerUser, userAuthStatus, userData, verifyEmailRegistration, forgotPassword, reset_password }
 })
