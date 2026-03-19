@@ -30,27 +30,6 @@
         </button>
       </div>
 
-      <!-- Expired State -->
-      <div v-else-if="verificationExpired" class="bg-white rounded-2xl shadow-xl p-8 text-center">
-        <div
-          class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"
-        >
-          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-3">Link Expired</h2>
-        <p class="text-gray-600">
-          This verification link has expired. Please contact your administrator for a new
-          invitation.
-        </p>
-      </div>
-
       <!-- Verification Form -->
       <div v-else class="bg-white rounded-2xl shadow-xl p-8">
         <!-- Loading Overlay -->
@@ -228,7 +207,6 @@ const router = useRouter()
 const loading = ref(false)
 const isVerifying = ref(false)
 const verificationComplete = ref(false)
-const verificationExpired = ref(false)
 
 // Form data
 const cnic = ref('')
@@ -262,19 +240,11 @@ const validateCNIC = (cnic) => {
   return pattern.test(cnic)
 }
 
-// Initialize component
 onMounted(() => {
-  // Extract verification token from URL
   const token = route.query.token
   if (!token) {
     errorMessage.value = 'Invalid verification link. Please use the link from your email.'
     return
-  }
-
-  // Check if token is expired (mock - replace with actual API call)
-  const isExpired = Math.random() < 0.1 // 10% chance for demo
-  if (isExpired) {
-    verificationExpired.value = true
   }
 })
 
@@ -293,17 +263,13 @@ const submitVerification = async () => {
   isVerifying.value = true
 
   try {
-    // Simulate API call
-    // await new Promise((resolve) => setTimeout(resolve, 1500))
-    const response = await api.post('/api/admin/verify/admin-role', {
+    await api.post('/api/admin/verify/admin-role', {
       cnic: cnic.value,
       token: route.query.token,
     })
     verificationComplete.value = true
     cnic.value = null
-    console.log(response)
   } catch (error) {
-    // errorMessage.value = 'Network error. Please check your connection and try again.'
     errorMessage.value = error.response?.data?.message ?? 'An error occurred during verification.'
     console.error('Verification error:', error)
   } finally {
@@ -312,6 +278,6 @@ const submitVerification = async () => {
 }
 
 const redirectToDashboard = () => {
-  router.replace('/admin/dashboard')
+  router.replace('/admin-dashboard')
 }
 </script>
