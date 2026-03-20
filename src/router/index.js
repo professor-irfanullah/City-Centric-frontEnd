@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore'
 const DASHBOARD_MAP = {
   'user': '/dashboard',
   'admin': '/admin-dashboard',
-  'super_admin': '/admin-dashboard'
+  'super_admin': '/super-admin/system-analytics'
 }
 
 const router = createRouter({
@@ -72,7 +72,7 @@ const router = createRouter({
       component: () => import('@/views/adminDashboard.vue'),
       meta: {
         requiresAuth: true,
-        allowedRoles: ['admin']
+        allowedRoles: ['admin', 'super_admin']
       }
     },
     {
