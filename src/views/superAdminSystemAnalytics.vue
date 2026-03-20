@@ -2,6 +2,28 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Back to Dashboard Link -->
+      <div class="mb-6">
+        <router-link
+          to="/admin-dashboard"
+          class="inline-flex items-center text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200 group"
+        >
+          <svg
+            class="w-4 h-4 mr-1 transform group-hover:-translate-x-0.5 transition-transform duration-200"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          Back to Dashboard
+        </router-link>
+      </div>
       <!-- Header with Invite Button -->
       <div class="mb-8 flex justify-between items-center">
         <div>
@@ -86,6 +108,9 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                created
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Joined
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -114,17 +139,33 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(admin.joined_at) }}
+                {{ formatDate(admin.created_at) }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {{
+                  admin.created_at < admin.joined_at
+                    ? formatDate(admin.joined_at)
+                    : 'Not yet joined'
+                }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span
                   :class="[
-                    admin.status === 'pending' && 'bg-yellow-100 text-yellow-800',
-                    admin.status === 'used' && 'bg-green-100 text-green-800',
+                    admin.created_at > admin.joined_at
+                      ? 'bg-red-100 text-red-800'
+                      : admin.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800',
                     'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
                   ]"
                 >
-                  {{ admin.status === 'used' ? 'Active' : 'Pending' }}
+                  {{
+                    admin.status === 'used'
+                      ? 'Active'
+                      : formatDate(admin.created_at) < formatDate(admin.joined_at)
+                      ? 'Pending'
+                      : 'Expired'
+                  }}
                 </span>
               </td>
             </tr>
@@ -174,10 +215,9 @@ const fetchData = async () => {
 
     stats.value = response
     admins.value = response.admins
-    console.log(response)
   } catch (err) {
     error.value = 'Failed to load admin data'
-    console.error(err)
+    console.error(err.response.data.msg)
   } finally {
     loading.value = false
   }
